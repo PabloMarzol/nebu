@@ -1,0 +1,4 @@
+{
+  "name": "OTC Desk Pro",
+  "command": "PORT=5001 NODE_ENV=development tsx server/otc-index.ts"
+}

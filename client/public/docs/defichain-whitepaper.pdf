@@ -1,0 +1,124 @@
+%PDF-1.4
+1 0 obj
+<<
+/Type /Catalog
+/Pages 2 0 R
+>>
+endobj
+
+2 0 obj
+<<
+/Type /Pages
+/Kids [3 0 R]
+/Count 1
+>>
+endobj
+
+3 0 obj
+<<
+/Type /Page
+/Parent 2 0 R
+/MediaBox [0 0 612 792]
+/Contents 4 0 R
+/Resources <<
+/Font <<
+/F1 5 0 R
+>>
+>>
+>>
+endobj
+
+4 0 obj
+<<
+/Length 1200
+>>
+stream
+BT
+/F1 24 Tf
+50 750 Td
+(DeFiChain Protocol Whitepaper) Tj
+0 -50 Td
+/F1 16 Tf
+(Revolutionary Decentralized Finance Infrastructure) Tj
+0 -80 Td
+/F1 12 Tf
+(Executive Summary) Tj
+0 -30 Td
+/F1 10 Tf
+(DeFiChain Protocol represents the next evolution in decentralized finance,) Tj
+0 -15 Td
+(offering a comprehensive suite of financial products built on cutting-edge) Tj
+0 -15 Td
+(blockchain technology. Our protocol enables seamless liquidity provision,) Tj
+0 -15 Td
+(yield farming, and cross-chain asset management through innovative) Tj
+0 -15 Td
+(smart contract architecture.) Tj
+0 -40 Td
+/F1 12 Tf
+(Key Features) Tj
+0 -25 Td
+/F1 10 Tf
+(• Cross-chain interoperability with major blockchains) Tj
+0 -15 Td
+(• Advanced yield optimization algorithms) Tj
+0 -15 Td
+(• Institutional-grade security and auditing) Tj
+0 -15 Td
+(• Automated market making and liquidity provision) Tj
+0 -15 Td
+(• Governance token with voting rights) Tj
+0 -40 Td
+/F1 12 Tf
+(Tokenomics) Tj
+0 -25 Td
+/F1 10 Tf
+(Total Supply: 1,000,000,000 DFC tokens) Tj
+0 -15 Td
+(Token Sale: 15% \(150,000,000 DFC\)) Tj
+0 -15 Td
+(Team & Advisors: 20% \(vested over 4 years\)) Tj
+0 -15 Td
+(Ecosystem Development: 25%) Tj
+0 -15 Td
+(Treasury & Reserves: 15%) Tj
+0 -15 Td
+(Community Incentives: 25%) Tj
+0 -40 Td
+/F1 12 Tf
+(Technology Stack) Tj
+0 -25 Td
+/F1 10 Tf
+(Built on Ethereum with Layer 2 scaling solutions for optimal) Tj
+0 -15 Td
+(performance and cost efficiency. Smart contracts audited by) Tj
+0 -15 Td
+(leading security firms including Certik and Quantstamp.) Tj
+ET
+endstream
+endobj
+
+5 0 obj
+<<
+/Type /Font
+/Subtype /Type1
+/BaseFont /Helvetica
+>>
+endobj
+
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000265 00000 n 
+0000001518 00000 n 
+trailer
+<<
+/Size 6
+/Root 1 0 R
+>>
+startxref
+1588
+%%EOF

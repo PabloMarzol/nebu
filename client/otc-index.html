@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OTC Desk Pro - Professional Cryptocurrency Trading</title>
+    <meta name="description" content="Professional OTC cryptocurrency trading platform with institutional-grade services, advanced settlement, and comprehensive compliance solutions." />
+    <style>
+      .glass {
+        background: rgba(255, 255, 255, 0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(139, 92, 246, 0.3);
+        border-top: 4px solid #8b5cf6;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      .neon-glow {
+        box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
+      }
+    </style>
+  </head>
+  <body class="bg-black text-white">
+    <div id="otc-root">
+      <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-black to-gray-900">
+        <div class="text-center">
+          <div class="loading-spinner mx-auto mb-4"></div>
+          <h1 class="text-2xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            OTC Desk Pro
+          </h1>
+          <p class="text-gray-400">Loading professional trading platform...</p>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/otc-main.tsx"></script>
+  </body>
+</html>

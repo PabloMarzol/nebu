@@ -1,0 +1,388 @@
+# Page snapshot
+
+```yaml
+- text: 🌟 NEBULA XCHANGE
+- link "NebulaX Logo NebulaX":
+  - /url: /
+  - img "NebulaX Logo"
+  - text: NebulaX
+- text: Trading ▾ Platform ▾ AI & Tools ▾ Account ▾ Legal ▾
+- link "About":
+  - /url: /about
+- link "Sign In":
+  - /url: /auth/login
+  - button "Sign In"
+- link "Sign Up":
+  - /url: /auth/register
+  - button "Sign Up"
+- heading "Welcome to NEBULA X" [level=1]
+- paragraph: The world's most advanced cryptocurrency trading platform
+- paragraph: Trade with institutional-grade security, AI-powered insights, and lightning-fast execution
+- text: $2.4B+ Trading Volume 500K+ Active Users 0.01% Trading Fees 99.9% Uptime
+- link "Start Trading Now":
+  - /url: /trading
+  - button "Start Trading Now":
+    - img
+    - text: Start Trading Now
+    - img
+- link "Get Started in 30s":
+  - /url: /onboarding
+  - button "Get Started in 30s":
+    - img
+    - text: Get Started in 30s
+    - img
+- link "Watch Demo":
+  - /url: /demo
+  - button "Watch Demo":
+    - img
+    - text: Watch Demo
+- text: Experience the Future of Trading Advanced Technology Meets Intuitive Design
+- heading "Interactive Trading Experience" [level=2]
+- paragraph: Discover our enhanced UI with micro-interactions and real-time feedback
+- heading "🎯 Emoji Reactions" [level=3]
+- paragraph: Express your trading emotions with animated emoji reactions
+- text: 🚀 📈 📉 💎 🔥 ⚡ 💯 🎯 🤑 😎 💪 🌟
+- paragraph: Click an emoji to react • Animations show your trading mood
+- text: ₿ Bitcoin $45,250.32 +2.45% Ξ Ethereum $3,150.89 -1.23% 📊 Portfolio $12,450 +5.67% ⚡ Active Orders 3
+- heading "🚀 Crypto Loading Spinners" [level=3]
+- paragraph: Basic Test Spinner (should be spinning)
+- paragraph: Red circle test (should also be spinning)
+- paragraph: Green circle (static but should be visible)
+- paragraph: "JS Animation Test (rotation: 170°)"
+- text: ₿
+- paragraph: Bitcoin (265°)
+- text: Ξ
+- paragraph: Ethereum (208°)
+- text: 📈
+- paragraph: Trading (303°)
+- text: 🚀
+- paragraph: Rocket (132°)
+- text: 💎
+- paragraph: Diamond (322°)
+- paragraph: All spinners should be rotating continuously • If not rotating, there's a CSS animation issue
+- heading "📊 Crypto Progress Indicators" [level=3]
+- paragraph: "Debug: BTC=75%, ETH=45%, Trading=90%, Div=65%"
+- text: ₿ Bitcoin Portfolio Allocation 75% Ξ Ethereum Staking Progress 45% 📈 Trading Goal Achievement 90% 🌈 Diversification Score 65%
+- heading "⚡ Interactive Buttons" [level=3]
+- text: Buy Now 🚀 Sell Now 📉 Analytics 📊 Settings ⚙️
+- paragraph: Interactive buttons with hover effects • Click to navigate to different sections
+- heading "AI Trading Assistant Suite" [level=3]
+- paragraph: Intelligent trading tools and personalized assistance
+- text: 🤖
+- heading "AI Assistant" [level=4]
+- paragraph: Smart trading advice
+- text: ⏰
+- heading "DeFi Timer" [level=4]
+- paragraph: Launch countdown
+- text: ⚡
+- heading "Quick Actions" [level=4]
+- paragraph: Fast trading tools
+- text: 🎨
+- heading "Smart Theme" [level=4]
+- paragraph: Auto color adapt
+- text: 🌟
+- heading "Nebby Guide" [level=4]
+- paragraph: Personal mascot
+- text: 📊
+- heading "Smart Widgets" [level=4]
+- paragraph: Personalized tools
+- text: AI Suite Active - 6 Tools Available
+- img
+- heading "Good Evening, Trader! 🚀" [level=2]
+- paragraph:
+  - img
+  - text: 6:58:01 PM • Ready to trade?
+- img
+- heading "💡 Stay Updated on News" [level=3]
+- paragraph: Market sentiment drives prices. Follow crypto news and major announcements for better timing!
+- paragraph: 🎯 Start your crypto journey today!
+- button "Sign Up for Free Demo"
+- img
+- heading "Quick Converter" [level=3]
+- paragraph: Live crypto prices
+- text: From
+- spinbutton: "1"
+- combobox: ₿ BTC
+- button:
+  - img
+- text: To
+- textbox: "112378.98000000"
+- combobox: ₮ USDT
+- text: ₿ 1 BTC = ₮ 112378.98000000 USDT
+- img
+- text: Live market rates
+- link "Trade Now":
+  - /url: /trading
+  - button "Trade Now":
+    - img
+    - text: Trade Now
+- img
+- text: Personalized Onboarding
+- button:
+  - img
+- button:
+  - img
+- text: Progress 0/7
+- progressbar
+- text: 1 Level 0 Points 0 Streak
+- heading "Welcome to NebulaX" [level=3]
+- text: beginner
+- img
+- text: "50"
+- paragraph: Get familiar with your trading dashboard and main navigation
+- button "Go to Page":
+  - text: Go to Page
+  - img
+- button "Complete":
+  - text: Complete
+  - img
+- button:
+  - img
+- heading "Your Achievements" [level=4]
+- img
+- img
+- img
+- img
+- img
+- button "Previous" [disabled]
+- text: Step 1 of 7
+- button "Next"
+- img
+- heading "Start Trading in 30 Seconds" [level=2]
+- paragraph: Join thousands of traders on Nebula X. Quick 3-step onboarding gets you trading instantly with demo funds.
+- link "Buy & Sell Crypto Now":
+  - /url: /trading
+  - button "Buy & Sell Crypto Now":
+    - img
+    - text: Buy & Sell Crypto Now
+    - img
+- link "OTC Desk Pro":
+  - /url: /otc-desk
+  - button "OTC Desk Pro":
+    - img
+    - text: OTC Desk Pro
+    - img
+- link "Trading Dashboard":
+  - /url: /trading
+  - button "Trading Dashboard":
+    - img
+    - text: Trading Dashboard
+    - img
+- link "Get Started":
+  - /url: /onboarding
+  - button "Get Started":
+    - img
+    - text: Get Started
+- link "Buy Bitcoin":
+  - /url: /trading?pair=BTCUSDT
+  - button "Buy Bitcoin"
+- link "Buy Ethereum":
+  - /url: /trading?pair=ETHUSDT
+  - button "Buy Ethereum"
+- link "View All Markets":
+  - /url: /markets
+  - button "View All Markets"
+- link "Portfolio":
+  - /url: /portfolio
+  - button "Portfolio"
+- link "OTC Desk Pro →":
+  - /url: http://localhost:5001
+  - button "OTC Desk Pro →"
+- text: ✓ No credit card required • ✓ $1,000 demo balance • ✓ VASP licensed & secure
+- heading "Live Markets" [level=3]
+- link "View All Markets →":
+  - /url: /markets
+  - button "View All Markets →"
+- img
+- text: ADA/USDT
+- img
+- text: "+0.02% $1.183705 Vol: $0M"
+- img
+- text: ALGO/USDT
+- img
+- text: "-0.51% $45.017787 Vol: $915M"
+- img
+- text: ATOM/USDT
+- img
+- text: "-0.32% $9.420233 Vol: $634M"
+- img
+- text: AVAX/USDT
+- img
+- text: "-0.55% $35.472466 Vol: $47M"
+- heading "🎮 Interactive Crypto Features 🎮" [level=2]
+- paragraph: Level up your crypto journey with our gamified learning tools, social features, and personal tracking systems
+- link "🎪 Learning Carnival Interactive crypto learning with playful gamification Play & Learn":
+  - /url: /learning-carnival
+  - text: 🎪
+  - heading "Learning Carnival" [level=3]
+  - paragraph: Interactive crypto learning with playful gamification
+  - text: Play & Learn
+- link "😊 Mood Tracker Emoji-based mood tracker for portfolio performance Track Emotions":
+  - /url: /mood-tracker
+  - text: 😊
+  - heading "Mood Tracker" [level=3]
+  - paragraph: Emoji-based mood tracker for portfolio performance
+  - text: Track Emotions
+- link "📸 Portfolio Flex One-click social media portfolio flex screenshot Share Gains":
+  - /url: /portfolio-screenshot
+  - text: 📸
+  - heading "Portfolio Flex" [level=3]
+  - paragraph: One-click social media portfolio flex screenshot
+  - text: Share Gains
+- link "🤗 Crypto Tutor Cute crypto mascot assistant for beginner tutorials Meet Nebby":
+  - /url: /crypto-tutor
+  - text: 🤗
+  - heading "Crypto Tutor" [level=3]
+  - paragraph: Cute crypto mascot assistant for beginner tutorials
+  - text: Meet Nebby
+- link "🏆 Achievement Stickers Personalized crypto achievement sticker collection Collect All":
+  - /url: /achievements
+  - text: 🏆
+  - heading "Achievement Stickers" [level=3]
+  - paragraph: Personalized crypto achievement sticker collection
+  - text: Collect All
+- heading "Ready to Level Up Your Crypto Game?" [level=3]
+- paragraph: Explore all our interactive features and start your gamified crypto learning journey today!
+- link "Start Learning Journey":
+  - /url: /learning-carnival
+  - button "Start Learning Journey"
+- link "View Achievements":
+  - /url: /achievements
+  - button "View Achievements"
+- heading "Why Choose Nebula X?" [level=2]
+- paragraph: Advanced features for professional crypto trading
+- img
+- heading "Lightning Fast Execution" [level=3]
+- paragraph: Ultra-low latency trading engine processes orders in microseconds with 99.9% uptime guarantee.
+- text: < 1ms execution time
+- img
+- heading "Quantum Security" [level=3]
+- paragraph: Advanced security with cold storage, multi-signature wallets, and 24/7 monitoring systems.
+- text: VASP Licensed & Compliant
+- img
+- heading "Advanced Trading Tools" [level=3]
+- paragraph: Professional charting, technical indicators, algorithmic trading, and portfolio management tools.
+- text: TradingView Integration
+- img
+- heading "Deep Liquidity" [level=3]
+- paragraph: Access to deep liquidity pools and institutional OTC desk for large volume trades.
+- text: $50M+ Daily Volume
+- img
+- heading "Mobile Trading" [level=3]
+- paragraph: Full-featured mobile apps for iOS and Android with real-time notifications and trading capabilities.
+- text: Available on App Stores
+- img
+- heading "24/7 Support" [level=3]
+- paragraph: Round-the-clock customer support with dedicated account managers for VIP clients.
+- text: Multi-language Support
+- heading "About NebulaX" [level=2]
+- paragraph: We're building the next-generation cryptocurrency exchange platform, engineered for speed, reliability, and security. Licensed and regulated, we serve traders worldwide with cutting-edge technology.
+- img
+- heading "VASP Licensed" [level=3]
+- paragraph: Fully compliant with Czech Republic regulations
+- img
+- heading "Global Reach" [level=3]
+- paragraph: Serving customers in 100+ countries
+- img
+- heading "Trusted by Millions" [level=3]
+- paragraph: Over 2 million active traders worldwide
+- img
+- text: Live Trading Charts
+- img
+- text: Real-time Analytics
+- img
+- text: Quantum Security
+- img
+- text: Global Network
+- heading "Regulatory Compliance" [level=3]
+- img
+- heading "Golden Michael s.r.o." [level=4]
+- paragraph: Registered in Czech Republic
+- paragraph: "Company ID: 19536143"
+- img
+- heading "FAÚ Supervised" [level=4]
+- paragraph: Financial Administration Office
+- paragraph: "VASP License #CZ-2024-001"
+- img
+- heading "AML/KYC Compliant" [level=4]
+- paragraph: Full customer verification
+- paragraph: Transaction monitoring
+- contentinfo:
+  - img
+  - text: Nebula X
+  - paragraph: Professional cryptocurrency platform for traders worldwide.
+  - link:
+    - /url: https://t.me/+byrMgAT0Psg5Y2U8
+    - img
+  - link:
+    - /url: https://t.me/+byrMgAT0Psg5Y2U8
+    - img
+  - link:
+    - /url: https://t.me/+byrMgAT0Psg5Y2U8
+    - img
+  - link:
+    - /url: mailto:support@nebulaxexchange.io
+    - img
+  - heading "Trading" [level=3]
+  - list:
+    - listitem:
+      - link "Spot Trading":
+        - /url: /trading
+    - listitem:
+      - link "Markets":
+        - /url: /markets
+    - listitem:
+      - link "Order Types":
+        - /url: /trading
+    - listitem:
+      - link "Trading Fees":
+        - /url: /trading-fees
+    - listitem:
+      - link "API Documentation":
+        - /url: /about
+  - heading "Services" [level=3]
+  - list:
+    - listitem:
+      - link "OTC Desk":
+        - /url: /otc-desk
+    - listitem:
+      - link "Copy Trading":
+        - /url: /copy-trading
+    - listitem:
+      - link "Institutional":
+        - /url: /institutional
+    - listitem:
+      - link "Mobile Apps":
+        - /url: /mobile
+    - listitem:
+      - link "Staking":
+        - /url: /staking
+  - heading "Support" [level=3]
+  - list:
+    - listitem:
+      - link "Contact Us":
+        - /url: /contact
+    - listitem:
+      - link "System Status":
+        - /url: /system-status
+    - listitem:
+      - link "Community":
+        - /url: https://t.me/+byrMgAT0Psg5Y2U8
+    - listitem:
+      - link "Security":
+        - /url: /security
+  - paragraph: "© 2024 Golden Michael s.r.o. | Company ID: 19536143 | VASP License: CZ-2024-001"
+  - paragraph: Registered in Czech Republic | Supervised by FAÚ (Financial Administration Office)
+  - link "Terms":
+    - /url: /terms
+  - link "Privacy":
+    - /url: /privacy
+  - link "AML Policy":
+    - /url: /aml-policy
+  - link "Risk Disclosure":
+    - /url: /risk-disclosure
+  - link "Compliance":
+    - /url: /compliance
+- region "Notifications (F8)":
+  - list
+```

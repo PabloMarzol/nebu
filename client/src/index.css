@@ -1,0 +1,2273 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Keyframes for crypto spinner animations */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Ensure Tailwind animate-spin works */
+.animate-spin {
+  animation: spin 1s linear infinite !important;
+}
+
+/* Force animations to work with explicit keyframes */
+.crypto-spinner {
+  animation: spin 1s linear infinite !important;
+}
+
+.crypto-spinner-slow {
+  animation: spin 2s linear infinite !important;
+}
+
+.crypto-spinner-fast {
+  animation: spin 0.5s linear infinite !important;
+}
+
+/* ANIMATED BACKGROUND SYSTEM */
+html, body, #root {
+  margin: 0 !important;
+  padding: 0 !important;
+  height: auto !important;
+  min-height: 100vh;
+  overflow: visible !important;
+  position: static !important;
+}
+
+/* Override any animation blocking */
+*, *::before, *::after {
+  animation-play-state: running !important;
+  animation-fill-mode: both !important;
+}
+
+/* Force checkbox label text visibility */
+.checkbox-label-text {
+  color: #ffffff !important;
+  font-weight: 400 !important;
+  opacity: 1 !important;
+  text-shadow: 0 0 1px rgba(0,0,0,0.5) !important;
+}
+
+/* Custom checkbox styling to ensure checkmark appears */
+button[data-radix-checkbox-root] {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: #9333ea !important; /* purple-600 */
+  border: 2px solid #a855f7 !important; /* purple-400 */
+  border-radius: 4px !important;
+  width: 20px !important;
+  height: 20px !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+}
+
+button[data-radix-checkbox-root]:hover {
+  background-color: #7c3aed !important; /* purple-500 */
+}
+
+button[data-radix-checkbox-root][data-state="checked"] {
+  background-color: #9333ea !important; /* purple-600 */
+  border-color: #a855f7 !important; /* purple-400 */
+}
+
+span[data-radix-checkbox-indicator] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  pointer-events: none !important;
+}
+
+span[data-radix-checkbox-indicator] svg {
+  display: block !important;
+  fill: none !important;
+  stroke: white !important;
+  stroke-width: 2px !important;
+  width: 14px !important;
+  height: 14px !important;
+}
+
+/* Add media query to check for motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  /* Override even if user has motion reduction enabled */
+  .crypto-spinner,
+  .crypto-spinner-slow,
+  .crypto-spinner-fast,
+  .animate-spin {
+    animation: spin 1s linear infinite !important;
+  }
+}
+
+/* Universal Video Background - Enhanced Prominence */
+.universal-video-background {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: -10 !important;
+  background: #000000;
+  overflow: hidden;
+  pointer-events: none !important;
+}
+
+.universal-video-background video {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(1.1);
+  min-width: 100%;
+  min-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: cover;
+}
+
+/* Ensure video covers all dark spaces */
+body {
+  background: transparent !important;
+}
+
+/* Page content container adjustments */
+.page-content {
+  position: relative;
+  z-index: 1;
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(0.5px);
+}
+
+/* Removed backgroundShift animation */
+
+/* Floating Particles - Disabled */
+.floating-particles {
+  display: none;
+}
+
+.particle {
+  display: none;
+}
+
+.particle:nth-child(1) {
+  left: 10%;
+  animation-delay: 0s;
+  animation-duration: 12s;
+}
+
+.particle:nth-child(2) {
+  left: 20%;
+  animation-delay: 2s;
+  animation-duration: 18s;
+}
+
+.particle:nth-child(3) {
+  left: 30%;
+  animation-delay: 4s;
+  animation-duration: 14s;
+}
+
+.particle:nth-child(4) {
+  left: 40%;
+  animation-delay: 6s;
+  animation-duration: 16s;
+}
+
+.particle:nth-child(5) {
+  left: 50%;
+  animation-delay: 8s;
+  animation-duration: 13s;
+}
+
+.particle:nth-child(6) {
+  left: 60%;
+  animation-delay: 1s;
+  animation-duration: 17s;
+}
+
+.particle:nth-child(7) {
+  left: 70%;
+  animation-delay: 3s;
+  animation-duration: 15s;
+}
+
+.particle:nth-child(8) {
+  left: 80%;
+  animation-delay: 5s;
+  animation-duration: 19s;
+}
+
+.particle:nth-child(9) {
+  left: 90%;
+  animation-delay: 7s;
+  animation-duration: 11s;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(100vh) translateX(0px) scale(0.5);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+    transform: translateY(90vh) translateX(10px) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(50vh) translateX(30px) scale(1.2);
+  }
+  90% {
+    opacity: 0.6;
+    transform: translateY(10vh) translateX(50px) scale(0.8);
+  }
+  100% {
+    transform: translateY(-100px) translateX(70px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+/* Subtle Grid Pattern - Disabled */
+.grid-overlay {
+  display: none;
+}
+
+@keyframes gridPulse {
+  0%, 100% { 
+    opacity: 0.02;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.05;
+    transform: scale(1.005);
+  }
+}
+
+/* Enhanced Blue Wave Effect - Disabled */
+.wave-overlay {
+  display: none;
+}
+
+@keyframes waveMotion {
+  0%, 100% {
+    transform: translateY(0px);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translateY(-10px);
+    opacity: 0.3;
+  }
+}
+
+/* Flowing Blue Gradient Orbs - Disabled */
+.gradient-orb {
+  display: none;
+}
+
+.gradient-orb:nth-child(1) {
+  top: 10%;
+  left: -10%;
+  animation-delay: 0s;
+}
+
+.gradient-orb:nth-child(2) {
+  top: 60%;
+  right: -10%;
+  animation-delay: 10s;
+  animation-duration: 25s;
+}
+
+.gradient-orb:nth-child(3) {
+  bottom: 20%;
+  left: 30%;
+  animation-delay: 20s;
+  animation-duration: 35s;
+}
+
+@keyframes orbFlow {
+  0%, 100% {
+    transform: translateX(0px) translateY(0px) scale(1);
+    opacity: 0.6;
+  }
+  25% {
+    transform: translateX(100px) translateY(-50px) scale(1.2);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateX(200px) translateY(50px) scale(0.8);
+    opacity: 0.4;
+  }
+  75% {
+    transform: translateX(50px) translateY(-30px) scale(1.1);
+    opacity: 0.7;
+  }
+}
+
+/* CREATIVE PAGE BACKGROUNDS */
+
+/* Trading Nexus - Homepage - Ultra Subtle */
+.trading-nexus {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  background: 
+    radial-gradient(ellipse at 30% 20%, rgba(59, 130, 246, 0.015) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(99, 102, 241, 0.01) 0%, transparent 45%),
+    linear-gradient(135deg, #000000 0%, #0a0a0a 25%, #111111 50%, #0a0a0a 75%, #000000 100%);
+}
+
+/* Market Waves - Trading Pages */
+.market-waves {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  background: 
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      rgba(16, 185, 129, 0.03) 20px,
+      transparent 40px,
+      rgba(239, 68, 68, 0.03) 60px,
+      transparent 80px
+    ),
+    radial-gradient(circle at 20% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(239, 68, 68, 0.08) 0%, transparent 50%),
+    linear-gradient(45deg, #0a0e1a 0%, #1a202c 50%, #0a0e1a 100%);
+  animation: marketFlow 15s linear infinite;
+}
+
+/* Wealth Constellation - Portfolio Pages */
+.wealth-constellation {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  background: 
+    radial-gradient(2px 2px at 20% 30%, rgba(251, 191, 36, 0.8) 0%, transparent 50%),
+    radial-gradient(2px 2px at 40% 70%, rgba(251, 191, 36, 0.6) 0%, transparent 50%),
+    radial-gradient(1px 1px at 90% 40%, rgba(251, 191, 36, 0.4) 0%, transparent 50%),
+    radial-gradient(1px 1px at 60% 90%, rgba(251, 191, 36, 0.3) 0%, transparent 50%),
+    radial-gradient(2px 2px at 10% 60%, rgba(251, 191, 36, 0.5) 0%, transparent 50%),
+    linear-gradient(135deg, #0f0a00 0%, #1a1000 25%, #2d1b00 50%, #1a1000 75%, #0f0a00 100%);
+  animation: constellationTwinkle 25s ease-in-out infinite;
+}
+
+/* Data Streams - Markets Pages */
+.data-streams {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      rgba(6, 182, 212, 0.02) 2px,
+      transparent 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      rgba(6, 182, 212, 0.02) 2px,
+      transparent 4px
+    ),
+    radial-gradient(ellipse at center, rgba(6, 182, 212, 0.1) 0%, transparent 70%),
+    linear-gradient(180deg, #001122 0%, #002244 50%, #001122 100%);
+  animation: dataFlow 12s linear infinite;
+}
+
+/* Cyber Fortress - Security Pages */
+.cyber-fortress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  background: 
+    linear-gradient(45deg, transparent 30%, rgba(239, 68, 68, 0.05) 31%, rgba(239, 68, 68, 0.05) 33%, transparent 34%),
+    linear-gradient(-45deg, transparent 30%, rgba(239, 68, 68, 0.05) 31%, rgba(239, 68, 68, 0.05) 33%, transparent 34%),
+    radial-gradient(circle at 50% 50%, rgba(239, 68, 68, 0.08) 0%, transparent 70%),
+    linear-gradient(135deg, #1a0000 0%, #330000 25%, #1a0000 50%, #330000 75%, #1a0000 100%);
+  background-size: 40px 40px, 40px 40px, 100% 100%, 100% 100%;
+  animation: fortressShield 18s ease-in-out infinite;
+}
+
+/* Neural Network - AI Pages */
+.neural-network {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  background: 
+    radial-gradient(1px 1px at 10% 20%, rgba(139, 92, 246, 0.6) 0%, transparent 50%),
+    radial-gradient(1px 1px at 30% 60%, rgba(139, 92, 246, 0.4) 0%, transparent 50%),
+    radial-gradient(1px 1px at 70% 30%, rgba(139, 92, 246, 0.5) 0%, transparent 50%),
+    radial-gradient(1px 1px at 90% 80%, rgba(139, 92, 246, 0.3) 0%, transparent 50%),
+    linear-gradient(45deg, rgba(139, 92, 246, 0.02) 0%, transparent 25%, rgba(139, 92, 246, 0.02) 50%, transparent 75%),
+    linear-gradient(135deg, #0a0014 0%, #1a0033 25%, #2d004d 50%, #1a0033 75%, #0a0014 100%);
+  animation: neuralPulse 22s ease-in-out infinite;
+}
+
+/* Corporate Towers - Institutional Pages */
+.corporate-towers {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  background: 
+    linear-gradient(0deg, rgba(71, 85, 105, 0.1) 0%, transparent 10%),
+    linear-gradient(0deg, rgba(71, 85, 105, 0.08) 0%, transparent 15%),
+    linear-gradient(0deg, rgba(71, 85, 105, 0.06) 0%, transparent 20%),
+    radial-gradient(ellipse at 50% 100%, rgba(71, 85, 105, 0.15) 0%, transparent 60%),
+    linear-gradient(135deg, #0f1419 0%, #1e2832 25%, #334155 50%, #1e2832 75%, #0f1419 100%);
+  animation: corporateGlow 30s ease-in-out infinite;
+}
+
+/* Command Center - Admin/CRM Pages */
+.command-center {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  background: 
+    repeating-conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(34, 197, 94, 0.03) 45deg, transparent 90deg),
+    radial-gradient(circle at 25% 25%, rgba(34, 197, 94, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 75% 75%, rgba(34, 197, 94, 0.08) 0%, transparent 50%),
+    linear-gradient(135deg, #001a00 0%, #003300 25%, #004d00 50%, #003300 75%, #001a00 100%);
+  animation: commandScan 16s linear infinite;
+}
+
+/* Knowledge Galaxy - Education Pages */
+.knowledge-galaxy {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  background: 
+    radial-gradient(2px 2px at 15% 25%, rgba(168, 85, 247, 0.6) 0%, transparent 50%),
+    radial-gradient(1px 1px at 35% 65%, rgba(168, 85, 247, 0.4) 0%, transparent 50%),
+    radial-gradient(2px 2px at 75% 35%, rgba(168, 85, 247, 0.5) 0%, transparent 50%),
+    radial-gradient(1px 1px at 85% 75%, rgba(168, 85, 247, 0.3) 0%, transparent 50%),
+    conic-gradient(from 0deg at 50% 50%, rgba(168, 85, 247, 0.05) 0deg, transparent 60deg, rgba(168, 85, 247, 0.03) 120deg, transparent 180deg),
+    linear-gradient(135deg, #0f0019 0%, #1a0033 25%, #2d0066 50%, #1a0033 75%, #0f0019 100%);
+  animation: galaxyRotation 40s linear infinite;
+}
+
+/* Community Web - Social Pages */
+.community-web {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  background: 
+    radial-gradient(1px 1px at 20% 20%, rgba(236, 72, 153, 0.5) 0%, transparent 40%),
+    radial-gradient(1px 1px at 60% 40%, rgba(59, 130, 246, 0.4) 0%, transparent 40%),
+    radial-gradient(1px 1px at 40% 80%, rgba(16, 185, 129, 0.3) 0%, transparent 40%),
+    radial-gradient(1px 1px at 80% 60%, rgba(251, 191, 36, 0.3) 0%, transparent 40%),
+    linear-gradient(45deg, rgba(236, 72, 153, 0.02) 0%, transparent 25%, rgba(59, 130, 246, 0.02) 50%, transparent 75%),
+    linear-gradient(135deg, #0a0514 0%, #1a0a28 25%, #2d1450 50%, #1a0a28 75%, #0a0514 100%);
+  animation: communityPulse 18s ease-in-out infinite;
+}
+
+/* Cosmic Void - Default/Fallback */
+.cosmic-void {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  background: 
+    radial-gradient(ellipse at 30% 70%, rgba(59, 130, 246, 0.1) 0%, transparent 70%),
+    radial-gradient(ellipse at 70% 30%, rgba(99, 102, 241, 0.08) 0%, transparent 70%),
+    linear-gradient(135deg, #000000 0%, #0f172a 50%, #000000 100%);
+  animation: cosmicDrift 35s ease-in-out infinite;
+}
+
+/* BACKGROUND ANIMATIONS */
+
+@keyframes tradingPulse {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  25% { filter: brightness(1.1) hue-rotate(15deg); }
+  50% { filter: brightness(0.9) hue-rotate(-10deg); }
+  75% { filter: brightness(1.05) hue-rotate(5deg); }
+}
+
+@keyframes marketFlow {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
+}
+
+@keyframes constellationTwinkle {
+  0%, 100% { filter: brightness(1) contrast(1); }
+  25% { filter: brightness(1.3) contrast(1.1); }
+  50% { filter: brightness(0.7) contrast(0.9); }
+  75% { filter: brightness(1.1) contrast(1.05); }
+}
+
+@keyframes dataFlow {
+  0% { background-position: 0% 0%, 0% 0%; }
+  100% { background-position: 100% 100%, 0% 100%; }
+}
+
+@keyframes fortressShield {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  33% { filter: brightness(1.2) saturate(1.3); }
+  66% { filter: brightness(0.8) saturate(0.8); }
+}
+
+@keyframes neuralPulse {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg) saturate(1); }
+  20% { filter: brightness(1.2) hue-rotate(10deg) saturate(1.2); }
+  40% { filter: brightness(0.8) hue-rotate(-5deg) saturate(0.9); }
+  60% { filter: brightness(1.1) hue-rotate(15deg) saturate(1.1); }
+  80% { filter: brightness(0.9) hue-rotate(-10deg) saturate(0.95); }
+}
+
+@keyframes corporateGlow {
+  0%, 100% { filter: brightness(1) contrast(1); }
+  50% { filter: brightness(1.15) contrast(1.1); }
+}
+
+@keyframes commandScan {
+  0% { background-position: 0deg; }
+  100% { background-position: 360deg; }
+}
+
+@keyframes galaxyRotation {
+  0% { background-position: 0deg; }
+  100% { background-position: 360deg; }
+}
+
+@keyframes communityPulse {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  25% { filter: brightness(1.1) hue-rotate(20deg); }
+  50% { filter: brightness(0.9) hue-rotate(-15deg); }
+  75% { filter: brightness(1.05) hue-rotate(10deg); }
+}
+
+@keyframes cosmicDrift {
+  0%, 100% { filter: brightness(1) hue-rotate(0deg); }
+  33% { filter: brightness(1.1) hue-rotate(30deg); }
+  66% { filter: brightness(0.9) hue-rotate(-20deg); }
+}
+
+/* Clear navbar styles */
+
+/* Micro-interaction enhancements */
+.btn-micro-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-micro-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(168, 85, 247, 0.2);
+}
+
+.btn-slide-hover {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-slide-hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-slide-hover:hover::before {
+  left: 100%;
+}
+
+/* Enhanced Switch/Toggle Styling - Force Slideable Behavior */
+button[role="switch"] {
+  position: relative !important;
+  background-color: rgb(71 85 105) !important;
+  border: 2px solid rgb(51 65 85) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  cursor: pointer !important;
+  width: 44px !important;
+  height: 24px !important;
+  border-radius: 9999px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  padding: 2px !important;
+}
+
+button[role="switch"][data-state="checked"] {
+  background-color: rgb(147 51 234) !important;
+  border-color: rgb(168 85 247) !important;
+  box-shadow: 0 0 0 2px rgb(147 51 234 / 0.2) !important;
+}
+
+button[role="switch"][data-state="unchecked"] {
+  background-color: rgb(71 85 105) !important;
+  border-color: rgb(51 65 85) !important;
+}
+
+button[role="switch"]:hover {
+  transform: scale(1.05) !important;
+}
+
+button[role="switch"][data-state="checked"]:hover {
+  background-color: rgb(168 85 247) !important;
+  box-shadow: 0 0 0 3px rgb(168 85 247 / 0.3) !important;
+}
+
+button[role="switch"][data-state="unchecked"]:hover {
+  background-color: rgb(100 116 139) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Switch thumb animation - THE KEY FIX FOR SLIDING */
+button[role="switch"] span {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  background-color: white !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 50% !important;
+  display: block !important;
+  pointer-events: none !important;
+  will-change: transform !important;
+}
+
+/* CRITICAL: This makes the thumb slide to the right when checked */
+button[role="switch"][data-state="checked"] span {
+  transform: translateX(20px) !important;
+  background-color: white !important;
+  box-shadow: 0 2px 8px rgba(147, 51, 234, 0.3) !important;
+}
+
+/* CRITICAL: This keeps the thumb on the left when unchecked */
+button[role="switch"][data-state="unchecked"] span {
+  transform: translateX(0px) !important;
+}
+
+/* Additional fallback selectors */
+.peer span,
+[data-state] span {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  will-change: transform !important;
+}
+
+[data-state="checked"] span {
+  transform: translateX(20px) !important;
+}
+
+[data-state="unchecked"] span {
+  transform: translateX(0px) !important;
+}
+
+/* Security toggle container enhancements */
+.security-toggle-container {
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+.security-toggle-container:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.security-toggle-container:active {
+  transform: translateY(0);
+}
+
+/* Heat map indicators */
+.heat-indicator {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #f97316, #ea580c);
+  animation: pulse-heat 2s infinite;
+}
+
+/* Force Button Content Centering - Action Buttons Fix */
+.btn-futuristic {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 48px !important;
+  line-height: 1 !important;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+}
+
+/* Additional centering for button content */
+button[class*="btn-futuristic"] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  height: 48px !important;
+  line-height: 1 !important;
+  padding-top: 12px !important;
+  padding-bottom: 12px !important;
+}
+
+/* Ensure text and icons are vertically centered */
+button[class*="btn-futuristic"] * {
+  vertical-align: middle !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+@keyframes pulse-heat {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Contextual color transitions */
+.contextual-transition {
+  transition: background-color 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+}
+
+/* Accessibility enhancements */
+.focus-visible {
+  outline: 2px solid #a855f7;
+  outline-offset: 2px;
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  nav {
+    transition: none !important;
+  }
+  
+  .btn-micro-hover,
+  .btn-slide-hover,
+  .contextual-transition {
+    transition: none !important;
+  }
+  
+  .heat-indicator {
+    animation: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  nav {
+    border-bottom: 2px solid #ffffff !important;
+  }
+}
+
+/* Radial gradient utility */
+.bg-gradient-radial {
+  background: radial-gradient(circle, var(--tw-gradient-stops));
+}
+
+/* Dialog positioning fix - ensures modals appear centered */
+[data-radix-portal] {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 50 !important;
+}
+
+/* Force all Dialog components to center */
+[data-radix-popper-content-wrapper],
+[data-radix-dialog-overlay] {
+  position: fixed !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  z-index: 50 !important;
+}
+
+[data-radix-dialog-content] {
+  position: relative !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  margin: auto !important;
+  z-index: 51 !important;
+  max-height: 85vh !important;
+  overflow-y: auto !important;
+}
+
+/* Stronger overrides for all dialog elements */
+.dialog-overlay,
+[role="dialog"],
+[aria-modal="true"] {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 51 !important;
+}
+
+/* Override any positioning from shadcn */
+.fixed.inset-0.z-50 {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Force center positioning on dialog content specifically */
+div[data-state="open"] > div {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 51 !important;
+}
+
+/* Enhanced dropdown animations */
+@keyframes slide-in-from-top-2 {
+  from {
+    transform: translateY(-8px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation-fill-mode: both;
+}
+
+.slide-in-from-top-2 {
+  animation-name: slide-in-from-top-2;
+}
+
+.duration-200 {
+  animation-duration: 200ms;
+}
+
+/* Reset top spacing but preserve scroll behavior */
+.no-top-spacing {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+
+
+/* OVERRIDE TAILWIND BASE LAYER */
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+}
+
+/* DIRECT CSS OVERRIDE - NO FRAMEWORK INTERFERENCE */
+html {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow-x: hidden;
+  overflow-y: auto !important;
+  height: auto !important;
+  position: static !important;
+}
+
+#root {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* NAVBAR ABSOLUTE POSITIONING */
+nav[class*="fixed"] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 50 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+:root {
+  --background: hsl(216, 50%, 8%);
+  --foreground: hsl(213, 31%, 91%);
+  --muted: hsl(217, 33%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --popover: hsl(216, 50%, 8%);
+  --popover-foreground: hsl(213, 31%, 91%);
+  --card: hsl(216, 50%, 8%);
+  --card-foreground: hsl(213, 31%, 91%);
+  --border: hsl(217, 33%, 17%);
+  --input: hsl(217, 33%, 17%);
+  --primary: hsl(262, 83%, 70%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(217, 33%, 17%);
+  --secondary-foreground: hsl(213, 31%, 91%);
+  --accent: hsl(217, 33%, 17%);
+  --accent-foreground: hsl(213, 31%, 91%);
+  --destructive: hsl(0, 62%, 30%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(262, 83%, 70%);
+  --radius: 0.75rem;
+  
+  /* Nebula colors */
+  --nebula-900: hsl(218, 65%, 8%);
+  --nebula-800: hsl(217, 33%, 17%);
+  --nebula-700: hsl(215, 25%, 27%);
+  --nebula-600: hsl(215, 16%, 35%);
+  --nebula-500: hsl(215, 14%, 45%);
+  --nebula-400: hsl(215, 28%, 65%);
+  --nebula-300: hsl(215, 28%, 81%);
+  --nebula-200: hsl(210, 22%, 89%);
+  --nebula-100: hsl(210, 20%, 95%);
+  
+  /* Accent colors */
+  --accent-purple: hsl(262, 83%, 70%);
+  --accent-pink: hsl(328, 85%, 70%);
+  --accent-cyan: hsl(191, 91%, 43%);
+}
+
+/* Enhanced Button Micro-interactions */
+@layer components {
+  .btn-micro-hover {
+    @apply transition-all duration-300 ease-out transform-gpu;
+    @apply hover:scale-105 hover:shadow-xl hover:shadow-purple-500/25;
+    @apply active:scale-95 active:transition-none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-micro-hover::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.1),
+      transparent
+    );
+    transition: left 0.6s ease-out;
+  }
+
+  .btn-micro-hover:hover::before {
+    left: 100%;
+  }
+
+  .btn-glow-hover {
+    @apply transition-all duration-300 ease-out transform-gpu;
+    @apply hover:scale-105 hover:brightness-110;
+    @apply active:scale-95 active:transition-none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-glow-hover:hover {
+    box-shadow: 
+      0 0 20px rgba(168, 85, 247, 0.4),
+      0 0 40px rgba(168, 85, 247, 0.2),
+      0 10px 30px rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-pulse-hover {
+    @apply transition-all duration-300 ease-out;
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  .btn-pulse-hover:hover {
+    animation: none;
+    @apply scale-110 shadow-2xl;
+    box-shadow: 
+      0 0 30px rgba(34, 197, 94, 0.5),
+      0 0 60px rgba(34, 197, 94, 0.3),
+      0 15px 35px rgba(0, 0, 0, 0.4);
+  }
+
+  .btn-slide-hover {
+    @apply transition-all duration-300 ease-out transform-gpu;
+    @apply hover:scale-105 hover:-translate-y-1;
+    @apply active:scale-95 active:translate-y-0 active:transition-none;
+    position: relative;
+  }
+
+  .btn-slide-hover:hover {
+    box-shadow: 
+      0 10px 25px rgba(0, 0, 0, 0.2),
+      0 0 20px rgba(139, 92, 246, 0.3);
+  }
+
+  .btn-ripple-hover {
+    @apply transition-all duration-300 ease-out transform-gpu;
+    @apply hover:scale-105;
+    @apply active:scale-95 active:transition-none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-ripple-hover::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  .btn-ripple-hover:hover::after {
+    width: 300px;
+    height: 300px;
+  }
+
+  .btn-magnetic-hover {
+    @apply transition-all duration-300 ease-out transform-gpu;
+    cursor: pointer;
+  }
+
+  .btn-magnetic-hover:hover {
+    @apply scale-110;
+    box-shadow: 
+      0 0 25px rgba(6, 182, 212, 0.4),
+      0 0 50px rgba(6, 182, 212, 0.2),
+      0 15px 35px rgba(0, 0, 0, 0.3);
+  }
+
+  .btn-bounce-hover {
+    @apply transition-all duration-300 ease-out transform-gpu;
+    @apply hover:scale-105 hover:-translate-y-2;
+    @apply active:scale-95 active:translate-y-0 active:transition-none;
+  }
+
+  .btn-bounce-hover:hover {
+    animation: bounce 0.6s ease-in-out;
+    box-shadow: 
+      0 15px 30px rgba(0, 0, 0, 0.2),
+      0 0 25px rgba(236, 72, 153, 0.3);
+  }
+
+  @keyframes bounce {
+    0%, 20%, 50%, 80%, 100% {
+      transform: translateY(-2px) scale(1.05);
+    }
+    40% {
+      transform: translateY(-4px) scale(1.08);
+    }
+    60% {
+      transform: translateY(-2px) scale(1.05);
+    }
+  }
+
+  .btn-rotate-hover {
+    @apply transition-all duration-300 ease-out transform-gpu;
+    @apply hover:scale-105 hover:rotate-2;
+    @apply active:scale-95 active:rotate-0 active:transition-none;
+  }
+
+  .btn-rotate-hover:hover {
+    box-shadow: 
+      0 10px 25px rgba(0, 0, 0, 0.2),
+      0 0 20px rgba(168, 85, 247, 0.3);
+  }
+}
+
+/* Nuclear reset for crisp text */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  text-rendering: optimizeLegibility !important;
+  transform: none !important;
+  filter: none !important;
+  will-change: auto !important;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  zoom: 1 !important;
+}
+
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Remove any default browser spacing */
+body, html {
+  border: 0;
+  outline: 0;
+  font-size: 100%;
+  vertical-align: baseline;
+  background: transparent;
+}
+
+/* Ensure no space above navbar */
+nav[class*="navbar"] {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 1000 !important;
+}
+
+.navbar-fixed {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 1000 !important;
+  background: rgba(13, 13, 20, 0.95) !important;
+  /* backdrop-filter: blur(20px) !important; */
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1) !important;
+}
+
+.dark {
+  --background: hsl(216, 50%, 8%);
+  --foreground: hsl(213, 31%, 91%);
+  --muted: hsl(217, 33%, 17%);
+  --muted-foreground: hsl(215, 20%, 65%);
+  --popover: hsl(216, 50%, 8%);
+  --popover-foreground: hsl(213, 31%, 91%);
+  --card: hsl(216, 50%, 8%);
+  --card-foreground: hsl(213, 31%, 91%);
+  --border: hsl(217, 33%, 17%);
+  --input: hsl(217, 33%, 17%);
+  --primary: hsl(262, 83%, 70%);
+  --primary-foreground: hsl(210, 40%, 98%);
+  --secondary: hsl(217, 33%, 17%);
+  --secondary-foreground: hsl(213, 31%, 91%);
+  --accent: hsl(217, 33%, 17%);
+  --accent-foreground: hsl(213, 31%, 91%);
+  --destructive: hsl(0, 62%, 30%);
+  --destructive-foreground: hsl(210, 40%, 98%);
+  --ring: hsl(262, 83%, 70%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif !important;
+    background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(139, 92, 246, 0.15), transparent),
+                radial-gradient(ellipse 80% 80% at 80% 50%, rgba(236, 72, 153, 0.1), transparent),
+                radial-gradient(ellipse 80% 50% at 20% 80%, rgba(6, 182, 212, 0.1), transparent),
+                linear-gradient(180deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+    color: #ffffff !important;
+    min-height: 100vh;
+  }
+  
+  .mono {
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Monaco, Inconsolata, 'Roboto Mono', 'Source Code Pro', monospace;
+  }
+}
+
+@layer utilities {
+  .gradient-bg {
+    background: linear-gradient(-45deg, var(--nebula-900), var(--nebula-800), var(--accent-purple), var(--accent-pink));
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+  }
+  
+  .glass {
+    background: rgba(15, 23, 42, 0.4);
+    /* backdrop-filter: blur(16px); */
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    box-shadow: 
+      0 8px 32px 0 rgba(31, 38, 135, 0.37),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  }
+  
+  .glass-strong {
+    background: rgba(15, 23, 42, 0.6);
+    /* backdrop-filter: blur(20px); */
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    box-shadow: 
+      0 12px 40px 0 rgba(31, 38, 135, 0.5),
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.1);
+  }
+  
+  .chart-bg {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(236, 72, 153, 0.1) 100%);
+  }
+  
+  /* Navbar spacing adjustment - Minimal gap for closer content */
+  .page-content {
+    padding-top: 3rem !important; /* 48px - much closer to navbar */
+    min-height: 100vh;
+    position: relative;
+  }
+  
+  .neon-border {
+    border: 1px solid;
+    border-image: linear-gradient(45deg, #8b5cf6, #06b6d4, #10b981, #f59e0b) 1;
+    box-shadow: 
+      0 0 20px rgba(139, 92, 246, 0.3),
+      0 0 40px rgba(6, 182, 212, 0.2);
+  }
+  
+  .neon-text {
+    text-shadow: 
+      0 0 10px currentColor,
+      0 0 20px currentColor,
+      0 0 30px currentColor;
+  }
+  
+  .hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 
+      0 20px 60px rgba(0, 0, 0, 0.3),
+      0 0 40px rgba(139, 92, 246, 0.2);
+  }
+  
+  .btn-futuristic {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(45deg, rgba(139, 92, 246, 0.1), rgba(6, 182, 212, 0.1));
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    transition: all 0.3s ease;
+    z-index: 10;
+    pointer-events: auto;
+  }
+  
+  .btn-futuristic::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    transition: left 0.5s ease;
+    pointer-events: none;
+  }
+  
+  .btn-futuristic:hover::before {
+    left: 100%;
+  }
+  
+  .btn-futuristic:hover {
+    border-color: rgba(139, 92, 246, 0.6);
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s infinite;
+}
+
+/* Enhanced Launch Progress Animations */
+
+.page-header {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+  position: relative;
+  z-index: 10;
+}
+
+/* Ensure navbar stays above all content */
+nav {
+  z-index: 9999 !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: rgba(0, 0, 0, 0.9) !important;
+  /* backdrop-filter: blur(20px) !important; */
+}
+
+/* Fix logo visibility */
+.navbar-logo {
+  position: relative !important;
+  z-index: 10000 !important;
+  display: flex !important;
+  align-items: center !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+}
+
+/* Ensure logo components are visible */
+.navbar-logo > * {
+  z-index: 10001 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Override any animations that might affect logo visibility */
+.navbar-logo, .navbar-logo * {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* NebulaX navbar styling */
+.navbar-fixed {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  z-index: 9999 !important;
+  display: block !important;
+  background: rgba(15, 23, 42, 0.95) !important;
+  /* backdrop-filter: blur(20px) !important; */
+  border-bottom: 1px solid rgba(139, 92, 246, 0.3) !important;
+  box-shadow: 0 4px 20px rgba(139, 92, 246, 0.1) !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Prevent navbar overlap on all pages */
+/* Removed conflicting padding rules - using only the .page-content rule with correct navbar height */
+
+@keyframes gradient-x {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes float-delayed {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px currentColor;
+  }
+  50% {
+    box-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+}
+
+@keyframes progress-fill {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: var(--progress-width);
+  }
+}
+
+@keyframes celebration-bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-20px);
+  }
+  60% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes milestone-glow {
+  0% {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+  }
+  50% {
+    background: rgba(34, 197, 94, 0.2);
+    border-color: rgba(34, 197, 94, 0.6);
+  }
+  100% {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+  }
+}
+
+@keyframes spin-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes neon-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 5px currentColor);
+  }
+  50% {
+    filter: drop-shadow(0 0 20px currentColor) drop-shadow(0 0 30px currentColor);
+  }
+}
+
+@keyframes hologram-flicker {
+  0%, 100% {
+    opacity: 1;
+  }
+  95% {
+    opacity: 1;
+  }
+  96% {
+    opacity: 0.8;
+  }
+  97% {
+    opacity: 1;
+  }
+  98% {
+    opacity: 0.9;
+  }
+  99% {
+    opacity: 1;
+  }
+}
+
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 3s ease infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+.animate-spin-reverse {
+  animation: spin-reverse 6s linear infinite;
+}
+
+.animate-neon-pulse {
+  animation: neon-pulse 2s ease-in-out infinite;
+}
+
+.animate-hologram-flicker {
+  animation: hologram-flicker 0.1s infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+  animation: float-delayed 4s ease-in-out infinite 1s;
+}
+
+.animate-float-slow {
+  animation: float-slow 5s ease-in-out infinite 2s;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-progress-fill {
+  animation: progress-fill 2s ease-out forwards;
+}
+
+.animate-celebration-bounce {
+  animation: celebration-bounce 1s ease-in-out;
+}
+
+.animate-milestone-glow {
+  animation: milestone-glow 2s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+/* Futuristic Particle Effects */
+@keyframes particles {
+  0% { transform: translateY(100vh) translateX(0) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(-100px) translateX(100px) rotate(360deg); opacity: 0; }
+}
+
+@keyframes matrix-rain {
+  0% { transform: translateY(-100vh); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+@keyframes neon-pulse {
+  0%, 100% { 
+    text-shadow: 
+      0 0 5px currentColor,
+      0 0 10px currentColor,
+      0 0 15px currentColor,
+      0 0 20px #8b5cf6;
+  }
+  50% { 
+    text-shadow: 
+      0 0 2px currentColor,
+      0 0 5px currentColor,
+      0 0 8px currentColor,
+      0 0 12px #8b5cf6,
+      0 0 18px #8b5cf6;
+  }
+}
+
+@keyframes hologram-flicker {
+  0%, 100% { opacity: 1; }
+  98% { opacity: 1; }
+  99% { opacity: 0.8; }
+  99.5% { opacity: 1; }
+}
+
+@keyframes data-stream {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100vw); }
+}
+
+.animate-particles {
+  animation: particles 8s linear infinite;
+}
+
+.animate-matrix-rain {
+  animation: matrix-rain 4s linear infinite;
+}
+
+.animate-neon-pulse {
+  animation: neon-pulse 2s ease-in-out infinite;
+}
+
+.animate-hologram-flicker {
+  animation: hologram-flicker 0.1s infinite;
+}
+
+.animate-data-stream {
+  animation: data-stream 6s linear infinite;
+}
+
+/* Enhanced Glassmorphism with Moving Gradients */
+.glass-enhanced {
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(139, 92, 246, 0.1) 50%,
+    rgba(236, 72, 153, 0.1) 75%,
+    rgba(255, 255, 255, 0.05) 100%);
+  /* backdrop-filter: blur(20px); */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-enhanced::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.1), 
+    transparent);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* Enhanced SVG Animations for Graphics */
+@keyframes svg-glow {
+  0%, 100% { 
+    filter: drop-shadow(0 0 5px currentColor) drop-shadow(0 0 10px currentColor);
+  }
+  50% { 
+    filter: drop-shadow(0 0 10px currentColor) drop-shadow(0 0 20px currentColor) drop-shadow(0 0 30px currentColor);
+  }
+}
+
+@keyframes svg-pulse {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+@keyframes svg-float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes svg-breathe {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.02) rotate(1deg); }
+  50% { transform: scale(1.05) rotate(0deg); }
+  75% { transform: scale(1.02) rotate(-1deg); }
+}
+
+.animate-svg-glow {
+  animation: svg-glow 3s ease-in-out infinite;
+}
+
+.animate-svg-pulse {
+  animation: svg-pulse 2s ease-in-out infinite;
+}
+
+.animate-svg-float {
+  animation: svg-float 4s ease-in-out infinite;
+}
+
+.animate-svg-breathe {
+  animation: svg-breathe 6s ease-in-out infinite;
+}
+
+/* Cyberpunk Grid Overlay */
+.cyber-grid {
+  background-image: 
+    linear-gradient(rgba(139, 92, 246, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 92, 246, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+  position: relative;
+}
+
+.cyber-grid::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 50%, transparent 0%, rgba(15, 23, 42, 0.8) 100%);
+  pointer-events: none;
+}
+
+
+/* [data-radix-select-content] {
+  position: fixed !important;
+}
+
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
+  position: fixed !important;
+} */
+
+
+
+/* [data-radix-dropdown-menu-content] {
+  min-width: 200px;
+  max-width: 400px;
+  width: max-content;
+  z-index: 9999;
+} */
+
+
+/* .dropdown-menu-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+
+@media (max-width: 640px) {
+  [data-radix-dropdown-menu-content] {
+    min-width: 160px;
+    max-width: 90vw;
+  }
+} */
+
+
+/* Fix for Token Picker Dialog - Ensure proper scrolling and layout */
+[data-radix-dialog-content] {
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: 70vh !important;
+  overflow: hidden !important;
+}
+
+[data-radix-dialog-content] > * {
+  flex-shrink: 0 !important;
+}
+
+[data-radix-dialog-content] > .flex-1 {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  min-height: 0 !important;
+}
+
+
+/* New approach: Force proper dialog behavior for token picker */
+.token-picker-dialog [data-radix-dialog-content] {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+.token-picker-dialog .max-h-\[50vh\] {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: auto !important;
+}
+
+/* Ensure proper separation between search and token list */
+.token-picker-dialog .border-b {
+  border-bottom: 1px solid #334155 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Force scroll behavior */
+.token-picker-dialog .overflow-y-auto {
+  overflow-y: auto !important;
+  max-height: 50vh !important;
+}
+
+/* Prevent any overlap */
+.token-picker-dialog > div:first-child {
+  position: sticky !important;
+  top: 0 !important;
+  background: inherit !important;
+  z-index: 10 !important;
+}
+
+/* Force dialog content to allow overflow visibility */
+[data-radix-dialog-content].overflow-visible {
+  overflow: visible !important;
+}
+
+/* Ensure proper stacking contexts */
+.token-picker-isolated-header {
+  position: relative !important;
+  z-index: 20 !important;
+  background: #0f172a !important;
+  isolation: isolate !important;
+}
+
+.token-picker-isolated-list {
+  position: relative !important;
+  z-index: 10 !important;
+  background: #0f172a !important;
+  isolation: isolate !important;
+}
+
+/* Force visual separator to be above everything */
+.token-picker-separator {
+  position: relative !important;
+  z-index: 30 !important;
+  height: 1px !important;
+  background: #334155 !important;
+}
+
+/* Ensure search elements are above token list */
+.token-picker-search-container {
+  position: relative !important;
+  z-index: 25 !important;
+}
+
+.token-picker-search-input {
+  position: relative !important;
+  z-index: 5 !important;
+}
+
+.token-picker-search-icon {
+  position: absolute !important;
+  z-index: 6 !important;
+}
+
+.token-picker-search-clear {
+  position: absolute !important;
+  z-index: 6 !important;
+}
+
+/* Ensure proper scroll behavior for token lists */
+.token-list-scrollable {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: thin !important;
+  scrollbar-color: #9333ea #1e293b !important;
+}
+
+.token-list-scrollable::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.token-list-scrollable::-webkit-scrollbar-track {
+  background: #1e293b !important;
+  border-radius: 3px !important;
+}
+
+.token-list-scrollable::-webkit-scrollbar-thumb {
+  background: #9333ea !important;
+  border-radius: 3px !important;
+}
+
+.token-list-scrollable::-webkit-scrollbar-thumb:hover {
+  background: #a855f7 !important;
+}
+
+/* Prevent body scroll when dialog is open */
+body[data-radix-dialog-open] {
+  overflow: hidden !important;
+}
+
+
+/* Ensure dialog positioning works correctly */
+[data-radix-dialog-overlay] {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+/* Fix for Settings Dialog - Prevent text overflow */
+.settings-dialog-content {
+  max-height: 80vh !important;
+  overflow-y: auto !important;
+  padding: 1.5rem !important;
+}
+
+.settings-dialog-content .space-y-6 {
+  padding: 1rem 0 !important;
+}
+
+.settings-dialog-content .grid {
+  gap: 0.5rem !important;
+}
+
+.settings-dialog-content p {
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
+.settings-dialog-content .text-xs {
+  font-size: 0.75rem !important;
+  line-height: 1.25 !important;
+}
+
+/* Ensure proper text wrapping in settings */
+.settings-dialog-content .flex.items-center.gap-1 {
+  flex-wrap: wrap !important;
+}
+
+.settings-dialog-content .flex.items-center.gap-2 {
+  flex-wrap: wrap !important;
+}
+
+/* Responsive adjustments for settings */
+@media (max-width: 640px) {
+  .settings-dialog-content {
+    max-height: 70vh !important;
+    padding: 1rem !important;
+  }
+  
+  .settings-dialog-content .grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+
+/* Ensure toggle switches don't overflow */
+.settings-dialog-content button.relative.inline-flex {
+  min-width: 44px !important;
+  flex-shrink: 0 !important;
+}
+
+.settings-dialog-content span.inline-block {
+  flex-shrink: 0 !important;
+}
+
+
+/* Fix dialog grid layout causing overlap */
+[data-radix-dialog-content] {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+  grid-template-columns: none !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Disable all animations on settings dialog */
+.settings-dialog * {
+  animation: none !important;
+  transition: none !important;
+}
+
+.settings-dialog [data-radix-dialog-content] {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+.settings-dialog .animate-in,
+.settings-dialog .animate-out,
+.settings-dialog [class*="animate-"] {
+  animation: none !important;
+}
+
+.settings-dialog [data-state="open"],
+.settings-dialog [data-state="closed"] {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Force proper layout during animations */
+.settings-dialog [data-radix-dialog-content] > * {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+/* Ensure dialog positioning is stable */
+.settings-dialog {
+  position: fixed !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.settings-dialog [data-radix-dialog-content] {
+  position: relative !important;
+  margin: auto !important;
+  transform: none !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+}
+
+[data-radix-dialog-content] > div {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Override problematic grid classes */
+.grid.grid-cols-4 {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 0.5rem !important;
+  width: 100% !important;
+}
+
+/* Ensure proper flex behavior */
+.flex.items-center.justify-between {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+/* Fix input containers */
+.flex.items-center.gap-2 {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  width: 100% !important;
+}
+
+.flex.items-center.gap-2 input {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+
+
+/* Ensure dialog content doesn't overlap */
+[data-radix-dialog-content] .space-y-6 {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+[data-radix-dialog-content] .space-y-6 > * {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+
+/* CRITICAL FIX: Override animation interference for settings dialog */
+.settings-dialog-override,
+.settings-dialog-override *,
+.settings-dialog-override *::before,
+.settings-dialog-override *::after {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+  contain: none !important;
+  isolation: auto !important;
+}
+
+/* Fix for Trading Page Container Issues - Simplified approach */
+.swap-tab-content {
+  position: static !important;
+  overflow: visible !important;
+  contain: none !important;
+  isolation: auto !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+}
+
+.swap-interface-container {
+  position: static !important;
+  display: block !important;
+  width: auto !important;
+  min-height: auto !important;
+  overflow: visible !important;
+}
+
+.swap-interface-wrapper {
+  position: static !important;
+  width: auto !important;
+  max-width: none !important;
+  overflow: visible !important;
+}
+
+/* Override problematic parent containers */
+.page-content {
+  position: static !important;
+  overflow: visible !important;
+  contain: none !important;
+}
+
+/* Fix TabsContent container issues */
+[data-radix-tabs-content] {
+  position: static !important;
+  overflow: visible !important;
+  contain: none !important;
+}
+
+/* CRITICAL: Ensure dialog can escape ALL parent constraints */
+.swap-tab-content [data-radix-dialog-content],
+.swap-tab-content [role="dialog"],
+.swap-tab-content [aria-modal="true"] {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 10000 !important;
+  margin: 0 !important;
+  max-width: none !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 400px !important;
+  max-width: 90vw !important;
+  max-height: 85vh !important;
+  overflow: visible !important;
+  contain: none !important;
+  isolation: auto !important;
+  animation: none !important;
+  transition: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+}
+
+/* Override any parent positioning that might interfere */
+.swap-tab-content *,
+.swap-tab-content *::before,
+.swap-tab-content *::after {
+  contain: none !important;
+  isolation: auto !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+}
+
+/* Ensure dialog overlay is above everything */
+.swap-tab-content [data-radix-dialog-overlay] {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9999 !important;
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Override any transform or positioning from parent containers */
+.swap-tab-content {
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  animation: none !important;
+  transition: none !important;
+}
+
+/* Simplified settings dialog override */
+.settings-dialog-override {
+  padding: 0 !important;
+  margin: 0 !important;
+  position: static !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  animation: none !important;
+  transition: none !important;
+  contain: none !important;
+  isolation: auto !important;
+  will-change: auto !important;
+}
+
+.settings-content-override {
+  padding: 0 !important;
+  margin: 0 !important;
+  position: static !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  animation: none !important;
+  transition: none !important;
+  contain: none !important;
+  isolation: auto !important;
+  will-change: auto !important;
+}
+
+.settings-inner-content {
+  padding: 1.5rem !important;
+  margin: 0 !important;
+  position: static !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  animation: none !important;
+  transition: none !important;
+  contain: none !important;
+  isolation: auto !important;
+  will-change: auto !important;
+}
+
+/* Ensure proper spacing within the settings dialog */
+.settings-inner-content > * {
+  margin-bottom: 1.5rem !important;
+}
+
+.settings-inner-content > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Ensure the dialog content has proper breathing room */
+.settings-dialog-override {
+  min-width: 400px !important;
+  max-width: 90vw !important;
+}
+
+@media (max-width: 640px) {
+  .settings-dialog-override {
+    min-width: 320px !important;
+    width: 95vw !important;
+  }
+}
+
+/* CRITICAL: Override ALL CSS properties that could interfere */
+.settings-dialog-override *,
+.settings-dialog-override *::before,
+.settings-dialog-override *::after {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+  contain: none !important;
+  isolation: auto !important;
+  position: static !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}

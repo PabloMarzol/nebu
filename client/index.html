@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>Nebula X - Professional Cryptocurrency Trading Platform</title>
+    <meta name="description" content="Trade crypto with confidence on Nebula X. VASP licensed platform offering instant onboarding, advanced analytics, and institutional-grade security. Start trading in 30 seconds." />
+    <meta name="keywords" content="cryptocurrency, bitcoin, ethereum, trading, exchange, VASP, crypto wallet, DeFi, blockchain" />
+    <meta name="author" content="Golden Michael s.r.o." />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://nebulax.com/" />
+    <meta property="og:title" content="Nebula X - Professional Cryptocurrency Trading Platform" />
+    <meta property="og:description" content="Trade crypto with confidence on Nebula X. VASP licensed platform offering instant onboarding, advanced analytics, and institutional-grade security." />
+    <meta property="og:image" content="/og-image.jpg" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://nebulax.com/" />
+    <meta property="twitter:title" content="Nebula X - Professional Cryptocurrency Trading Platform" />
+    <meta property="twitter:description" content="Trade crypto with confidence on Nebula X. VASP licensed platform offering instant onboarding, advanced analytics, and institutional-grade security." />
+    <meta property="twitter:image" content="/twitter-image.jpg" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  </head>
+  <body style="margin:0!important;padding:0!important;">
+    <div id="root"></div>
+    <script>
+      // Immediate fix before React loads
+      document.documentElement.style.margin = '0';
+      document.documentElement.style.padding = '0';
+      document.body.style.margin = '0';
+      document.body.style.padding = '0';
+      
+      // Wait for React to render then fix
+      setTimeout(() => {
+        const nav = document.querySelector('nav');
+        if (nav) {
+          nav.style.marginTop = '-100px';
+          nav.style.top = '0px';
+          nav.style.transform = 'translateY(0px)';
+        }
+      }, 500);
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
