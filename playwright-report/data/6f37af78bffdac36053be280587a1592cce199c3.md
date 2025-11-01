@@ -186,7 +186,7 @@
   - /url: /portfolio
   - button "Portfolio"
 - link "OTC Desk Pro →":
-  - /url: http://localhost:5001
+  - /url: http://localhost:5000
   - button "OTC Desk Pro →"
 - text: ✓ No credit card required • ✓ $1,000 demo balance • ✓ VASP licensed & secure
 - heading "Live Markets" [level=3]

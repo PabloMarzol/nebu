@@ -121,6 +121,8 @@ import NaturalLanguagePage from "@/pages/natural-language";
 import TradingFees from "@/pages/trading-fees";
 import InteractiveDemo from "@/pages/interactive-demo";
 import Support from "@/pages/support";
+import PaymentSuccess from "@/pages/payment-success";
+import RecoveryDashboard from "@/components/RecoveryDashboard";
 
 // Gamification Features
 import CryptoLearningCarnival from "@/components/gamification/crypto-learning-carnival";
@@ -302,6 +304,7 @@ function Router() {
         <Route path="/video-recorder" component={VideoRecorderPage} />
         <Route path="/payment" component={() => <EnhancedPaymentGateway />} />
         <Route path="/payments" component={() => <EnhancedPaymentGateway />} />
+        <Route path="/payment-success" component={PaymentSuccess} />
 
         
         <Route component={NotFound} />

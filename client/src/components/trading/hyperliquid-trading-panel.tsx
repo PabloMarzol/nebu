@@ -28,34 +28,19 @@ interface HyperliquidTradingPanelProps {
 }
 
 interface UserBalance {
-  totalBalance: number;
-  available: number;
+  totalBalance?: number;
+  available?: number;
   marginUsed?: number;
   unrealizedPnl?: number;
 }
 
-interface OpenPosition {
+interface Position {
+  side: string;
   symbol: string;
-  side: 'long' | 'short';
   size: number;
   entryPrice: number;
   pnl: number;
   leverage: number;
-}
-
-interface ActiveOrder {
-  id: string;
-  symbol: string;
-  side: string;
-  orderType: string;
-  amount: number;
-  price?: number;
-  status: string;
-}
-
-interface MarketData {
-  price: number;
-  change24h: number;
 }
 
 export default function HyperliquidTradingPanel({ tradingMode }: HyperliquidTradingPanelProps) {
@@ -87,6 +72,11 @@ export default function HyperliquidTradingPanel({ tradingMode }: HyperliquidTrad
 
   const availablePairs = tradingMode === 'futures' ? futuresPairs : spotPairs;
 
+interface MarketData {
+  price?: number;
+  change24h?: number;
+}
+
   // Fetch Hyperliquid Market Data
   const { data: marketData, isLoading: isLoadingMarket } = useQuery<MarketData>({
     queryKey: ['/api/hyperliquid/market', selectedPair],
@@ -101,14 +91,14 @@ export default function HyperliquidTradingPanel({ tradingMode }: HyperliquidTrad
   });
 
   // Fetch Active Orders
-  const { data: activeOrders } = useQuery<ActiveOrder[]>({
+  const { data: activeOrders } = useQuery<any[]>({
     queryKey: ['/api/hyperliquid/orders', walletAddress],
     enabled: !!walletAddress && isAuthenticated,
     refetchInterval: 3000,
   });
 
   // Fetch Open Positions (Futures Only)
-  const { data: openPositions } = useQuery<OpenPosition[]>({
+  const { data: openPositions } = useQuery<Position[]>({
     queryKey: ['/api/hyperliquid/positions', walletAddress],
     enabled: !!walletAddress && isAuthenticated && tradingMode === 'futures',
     refetchInterval: 3000,
@@ -587,7 +577,7 @@ export default function HyperliquidTradingPanel({ tradingMode }: HyperliquidTrad
       )}
 
       {/* Open Positions (Futures Only) */}
-      {tradingMode === 'futures' && isAuthenticated && openPositions && openPositions.length > 0 && (
+      {tradingMode === 'futures' && isAuthenticated && openPositions && (openPositions as any[]).length > 0 && (
         <Card className="glass">
           <CardHeader>
             <CardTitle className="flex items-center text-lg">
@@ -597,7 +587,7 @@ export default function HyperliquidTradingPanel({ tradingMode }: HyperliquidTrad
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {openPositions.map((position, index) => (
+              {(openPositions as any[]).map((position: any, index: number) => (
                 <div key={index} className="flex items-center justify-between p-3 border rounded-lg bg-slate-800/30">
                   <div className="flex items-center space-x-3">
                     <Badge className={position.side === 'long' ? 'bg-green-500' : 'bg-red-500'}>
@@ -637,7 +627,7 @@ export default function HyperliquidTradingPanel({ tradingMode }: HyperliquidTrad
           <CardContent>
             {activeOrders && activeOrders.length > 0 ? (
               <div className="space-y-3">
-                {activeOrders.map((order) => (
+                {activeOrders.map((order: any) => (
                   <div key={order.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center space-x-3">
                       <Badge className={getOrderStatusColor(order.status)}>

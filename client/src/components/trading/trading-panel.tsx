@@ -18,6 +18,13 @@ interface QuickTradePanelProps {
   priceChange: number;
 }
 
+interface UserBalance {
+  totalBalance?: number;
+  available?: number;
+  marginUsed?: number;
+  unrealizedPnl?: number;
+}
+
 export default function QuickTradePanel({ symbol, currentPrice = 0.0, priceChange = 0.0 }: QuickTradePanelProps) {
   const { walletAddress, isAuthenticated } = useWalletAuth();
   const { toast } = useToast();
@@ -42,8 +49,14 @@ export default function QuickTradePanel({ symbol, currentPrice = 0.0, priceChang
   const quoteToken = isFutures ? 'USDC' : symbol.split('/')[1] || 'USDC';
 
   // Fetch user balance from Hyperliquid
-  const { data: userBalance } = useQuery({
+  const { data: userBalance } = useQuery<UserBalance>({
     queryKey: ['/api/hyperliquid/balance', walletAddress],
+    queryFn: async () => {
+      if (!walletAddress) return null;
+      const response = await fetch(`/api/hyperliquid/balance/${walletAddress}`);
+      if (!response.ok) throw new Error('Failed to fetch balance');
+      return response.json();
+    },
     enabled: !!walletAddress && isAuthenticated,
     refetchInterval: 5000,
   });

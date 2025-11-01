@@ -1,0 +1,122 @@
+# Render Deployment Configuration for NebulaX
+# This file configures your entire deployment on Render
+
+services:
+  # Main Web Service (Backend + Frontend)
+  - type: web
+    name: nebulax-web
+    env: node
+    buildCommand: |
+      echo "🚀 Building NebulaX for production..."
+      npm ci
+      npm run build
+      echo "✅ Build completed successfully"
+    startCommand: |
+      echo "🌟 Starting NebulaX server..."
+      npm start
+    envVars:
+      # Database Configuration
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nebulax-db
+          property: connectionString
+      
+      # Node Environment
+      - key: NODE_ENV
+        value: production
+      
+      # Application Port
+      - key: PORT
+        value: 5000
+      
+      # Session Configuration
+      - key: SESSION_SECRET
+        generateValue: true
+      
+      # API Keys (Add your actual keys in Render dashboard)
+      - key: STRIPE_LIVE_SECRET_KEY
+        sync: false
+      - key: VITE_STRIPE_LIVE_KEY
+        sync: false
+      - key: ALT5_PAY_SECRET_KEY
+        sync: false
+      - key: ALT5_PAY_PUBLIC_KEY
+        sync: false
+      - key: ALT5_PAY_MERCHANT_ID
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: CRYPTOCOMPARE_API_KEY
+        sync: false
+      - key: COINAPI_KEY
+        sync: false
+      - key: INFURA_PROJECT_ID
+        sync: false
+      - key: ZERO_X_API_KEY
+        sync: false
+      - key: CHANGENOW_API_KEY
+        sync: false
+      - key: NOWPAYMENT_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      
+      # Blockchain Configuration
+      - key: DEFAULT_NETWORK
+        value: arbitrum
+      - key: CHAIN_ID
+        value: "42161"
+      - key: ETHEREUM_RPC_URL
+        value: https://arb1.arbitrum.io/rpc
+      
+      # Email Configuration
+      - key: FROM_EMAIL
+        value: noreply@nebulax.exchange
+      - key: SUPPORT_EMAIL
+        value: support@nebulax.exchange
+      
+      # Domain Configuration
+      - key: REPLIT_DOMAINS
+        value: "localhost:5000,127.0.0.1:5000"
+      
+      # Trading Configuration
+      - key: HYPERLIQUID_TESTNET
+        value: "false"
+      - key: LIVE_TRADING_API_KEY
+        sync: false
+
+    healthCheckPath: /api/health
+    autoDeploy: true
+    plan: starter  # Free tier available, upgrade as needed
+
+  # Background Worker for Processing (Optional - for heavy tasks)
+  - type: worker
+    name: nebulax-worker
+    env: node
+    buildCommand: npm ci
+    startCommand: node dist/worker.js
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: nebulax-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+    plan: free
+
+databases:
+  # PostgreSQL Database
+  - name: nebulax-db
+    databaseName: nebulax_production
+    user: nebulax_user
+    plan: starter  # Free tier available, upgrade as needed
+    postgresMajorVersion: 15
+    ipAllowList: []  # Allow connections from all Render services
+
+# Redis for Caching (Optional - for performance)
+- name: nebulax-redis
+  type: redis
+  plan: starter
+  maxmemoryPolicy: allkeys-lru

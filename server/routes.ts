@@ -66,11 +66,25 @@ import { registerExchangeOpsRoutes } from "./exchange-ops-simple";
 import stripeRoutes from "./routes/stripe-routes";
 import alt5PayRoutes from "./alt5pay-routes";
 import advancedFeaturesRoutes from "./routes/advanced-features";
+import multiProviderTestRoutes from "./routes/multi-provider-test-routes";
+import fxProSwapRoutes from "./routes/fx-proswap-routes";
+import fxAlt5SwapRoutes from "./routes/fx-alt5-swap-routes";
+import fxNOWSwapRoutes from "./routes/fx-now-swap-routes";
+import fxCRYSwapRoutes from "./routes/fx-cry-swap-routes";
+import fxRAMPSwapRoutes from "./routes/fx-ramp-swap-routes";
+import recoveryRoutes from "./routes/recovery-routes";
+import manualFxTriggerRoutes from "./routes/manual-fx-trigger";
+import fxFundingStatusRoutes from "./routes/fx-funding-status";
+import walletFundingRoutes from "./routes/wallet-funding";
+import alt5OnRampRoutes from "./routes/alt5-onramp-routes";
+import webhookTestRoutes from "./routes/webhook-test";
+import dotenv from "dotenv"
+dotenv.config()
 
 // Initialize Stripe if key is available
 let stripe: Stripe | undefined;
-if (process.env.STRIPE_SECRET_KEY) {
-  stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+if (process.env.STRIPE_LIVE_SECRET_KEY) {
+  stripe = new Stripe(process.env.STRIPE_LIVE_SECRET_KEY, {
     apiVersion: "2025-05-28.basil" as any,
   });
 }
@@ -529,7 +543,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tradingVolume: "15500000.00"
         }
       ];
-      res.json(revenueMetrics);
     } catch (error) {
       console.error("Error fetching revenue metrics:", error);
       res.status(500).json({ error: "Failed to fetch revenue metrics" });
@@ -3178,6 +3191,62 @@ app.get("/api/coincap/assets", async (req, res) => {
   app.use('/api', advancedFeaturesRoutes);
   console.log('[Routes] Advanced Features routes registered successfully');
 
+  // Multi-Provider Test Routes - For testing ChangeNow and NOWPayments
+  console.log('[Routes] Registering Multi-Provider Test routes...');
+  app.use('/api/multi-provider', multiProviderTestRoutes);
+  console.log('[Routes] Multi-Provider Test routes registered successfully');
+
+  // FX-ProSwap (Stripe) Dedicated Routes
+  console.log('[Routes] Registering FX-ProSwap routes...');
+  app.use('/api/fx-proswap', fxProSwapRoutes);
+  console.log('[Routes] FX-ProSwap routes registered successfully');
+
+  // FX-ALT5-Swap Dedicated Routes (Off-Ramp)
+  console.log('[Routes] Registering FX-ALT5-Swap routes...');
+  app.use('/api/fx-alt5-swap', fxAlt5SwapRoutes);
+  console.log('[Routes] FX-ALT5-Swap routes registered successfully');
+
+  // ALT5 On-Ramp Routes (Buy Crypto with Fiat)
+  console.log('[Routes] Registering ALT5 On-Ramp routes...');
+  app.use('/api/alt5-onramp', alt5OnRampRoutes);
+  console.log('[Routes] ALT5 On-Ramp routes registered successfully');
+
+  // FX-NOW-Swap Dedicated Routes
+  console.log('[Routes] Registering FX-NOW-Swap routes...');
+  app.use('/api/fx-now-swap', fxNOWSwapRoutes);
+  console.log('[Routes] FX-NOW-Swap routes registered successfully');
+
+  // FX-CRY-Swap Dedicated Routes
+  console.log('[Routes] Registering FX-CRY-Swap routes...');
+  app.use('/api/fx-cry-swap', fxCRYSwapRoutes);
+  console.log('[Routes] FX-CRY-Swap routes registered successfully');
+
+  // FX-RAMP-Swap Dedicated Routes
+  console.log('[Routes] Registering FX-RAMP-Swap routes...');
+  app.use('/api/fx-ramp', fxRAMPSwapRoutes);
+  console.log('[Routes] FX-RAMP-Swap routes registered successfully');
+
+  // Recovery Routes - CRITICAL for handling missing USDT payments
+  console.log('[Routes] Registering Recovery routes...');
+  app.use('/api/recovery', recoveryRoutes);
+  console.log('[Routes] Recovery routes registered successfully');
+
+  // Manual FX Trigger Routes - FOR TESTING GBP→USDT SWAP WITHOUT REAL PAYMENTS
+  console.log('[Routes] Registering Manual FX Trigger routes...');
+  app.use('/api/manual', manualFxTriggerRoutes);
+  console.log('[Routes] Manual FX Trigger routes registered successfully');
+
+  // Test Webhook Routes - FOR TESTING WEBHOOK PROCESSING WITHOUT SIGNATURES
+  console.log('[Routes] Registering Test Webhook routes...');
+  app.use('/api/test', webhookTestRoutes);
+  console.log('[Routes] Test Webhook routes registered successfully');
+
+  // ALT5 Test Routes - For debugging ALT5 integration
+  console.log('[Routes] Registering ALT5 Test routes...');
+  const alt5TestRoutes = await import('./routes/alt5-test-routes');
+  app.use('/api/alt5-test', alt5TestRoutes.default);
+  console.log('[Routes] ALT5 Test routes registered successfully');
+
   // HYBRID LIQUIDITY SYSTEM ROUTES - CRITICAL: Register before catch-all handler
   try {
     const { hybridLiquidityService } = await import('./services/hybrid-liquidity-service');
@@ -3539,10 +3608,143 @@ app.get("/api/coincap/assets", async (req, res) => {
 
   console.log('[CRITICAL APIS] All 11 critical API endpoints registered BEFORE catch-all handler');
 
+  // Register Wallet Funding Routes
+  console.log('[Routes] Registering Wallet Funding routes...');
+  app.use('/api/wallet', walletFundingRoutes);
+  console.log('[Routes] Wallet Funding routes registered successfully');
+
   // ALT5PAY FULL INTEGRATION - PRODUCTION READY
   const { alt5PayService } = await import('./services/alt5pay-service');
   console.log('[Alt5Pay] Setting up complete Alt5Pay integration...');
   
+  // Get current crypto price
+  app.get('/api/alt5/current-price', async (req, res) => {
+    try {
+      const { coin, currency = 'USD' } = req.query;
+      
+      if (!coin) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required parameter: coin',
+          message: 'Please provide a coin parameter (e.g., BTC, ETH, USDT)'
+        });
+      }
+
+      console.log(`[Alt5Pay] Getting current price for ${coin} in ${currency}`);
+      
+      const priceResponse = await alt5PayService.getCurrentPrice({
+        coin: coin as string,
+        currency: currency as 'USD' | 'CAD' | 'EUR'
+      });
+
+      if (!priceResponse.data || !priceResponse.data.price) {
+        throw new Error('Invalid price response from ALT5 Pay');
+      }
+
+      res.json({
+        success: true,
+        data: {
+          coin: priceResponse.data.coin,
+          price: parseFloat(priceResponse.data.price),
+          currency: priceResponse.data.currency,
+          timestamp: priceResponse.data.date_time,
+          source: 'ALT5 Pay API'
+        },
+        message: 'Current price retrieved successfully'
+      });
+
+    } catch (error: any) {
+      console.error('[Alt5Pay] Current price endpoint error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get current price',
+        message: error.message || 'ALT5 Pay API error'
+      });
+    }
+  });
+
+  // Get multiple coin prices at once
+  app.get('/api/alt5/prices', async (req, res) => {
+    try {
+      const { coins, currency = 'USD' } = req.query;
+      
+      if (!coins) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required parameter: coins',
+          message: 'Please provide coins parameter (e.g., BTC,ETH,USDT)'
+        });
+      }
+
+      const coinList = (coins as string).split(',');
+      const prices = [];
+
+      console.log(`[Alt5Pay] Getting prices for ${coinList.join(', ')} in ${currency}`);
+
+      for (const coin of coinList) {
+        try {
+          const priceResponse = await alt5PayService.getCurrentPrice({
+            coin: coin.trim() as string,
+            currency: currency as 'USD' | 'CAD' | 'EUR'
+          });
+
+          if (priceResponse.data && priceResponse.data.price) {
+            prices.push({
+              coin: priceResponse.data.coin,
+              price: parseFloat(priceResponse.data.price),
+              currency: priceResponse.data.currency,
+              timestamp: priceResponse.data.date_time
+            });
+          }
+        } catch (coinError) {
+          console.error(`[Alt5Pay] Failed to get price for ${coin}:`, coinError);
+          prices.push({
+            coin: coin.trim(),
+            price: null,
+            currency: currency as string,
+            timestamp: new Date().toISOString(),
+            error: 'Price unavailable'
+          });
+        }
+      }
+
+      res.json({
+        success: true,
+        data: prices,
+        count: prices.length,
+        message: 'Prices retrieved successfully'
+      });
+
+    } catch (error: any) {
+      console.error('[Alt5Pay] Prices endpoint error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get prices',
+        message: error.message || 'ALT5 Pay API error'
+      });
+    }
+  });
+
+  // Get ALT5 supported coins and assets
+  app.get('/api/alt5/supported-coins', (req, res) => {
+    try {
+      const supportedCoins = alt5PayService.getSupportedAssets();
+      res.json({
+        success: true,
+        data: supportedCoins,
+        count: supportedCoins.length,
+        message: 'Supported coins retrieved successfully'
+      });
+    } catch (error: any) {
+      console.error('[Alt5Pay] Supported coins endpoint error:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get supported coins',
+        message: error.message || 'Unknown error'
+      });
+    }
+  });
+
   // Test connection endpoint
   app.get('/api/alt5pay/test', async (req, res) => {
     try {
@@ -3554,6 +3756,9 @@ app.get("/api/coincap/assets", async (req, res) => {
         configured: alt5PayService.isConfigured(),
         supportedAssets: alt5PayService.getSupportedAssets(),
         endpoints: [
+          'GET /api/alt5/current-price',
+          'GET /api/alt5/prices',
+          'GET /api/alt5/supported-coins',
           'GET /api/alt5pay/test',
           'POST /api/alt5pay/wallet/create',
           'GET /api/alt5pay/transactions/:type/:id',
@@ -5684,5 +5889,3 @@ function getIntelligentFallbackResponse(query: string) {
     type: 'general' as const
   };
 }
-
-

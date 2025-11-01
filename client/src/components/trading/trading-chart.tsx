@@ -4,261 +4,303 @@ import { BarChart3, TrendingUp, TrendingDown, Camera, Share2 } from "lucide-reac
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import QuickTradePanel from "./trading-panel";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-  TimeScale,
-} from 'chart.js';
-import 'chartjs-adapter-date-fns';
-import { Line } from 'react-chartjs-2';
-
-// Register Chart.js components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler,
-  TimeScale
-);
+import { createChart, CandlestickSeries, HistogramSeries, ColorType } from 'lightweight-charts';
 
 interface TradingChartProps {
   symbol: string;
 }
 
+const timeframes = ['1m', '5m', '15m', '1h', '4h', '1D', '1W'];
+
+// Map frontend timeframes to Hyperliquid intervals
+const timeframeMap = {
+  '1m': '1m',
+  '5m': '5m', 
+  '15m': '15m',
+  '1h': '1h',
+  '4h': '4h',
+  '1D': '1d',
+  '1W': '1w',
+};
+
 export default function TradingChart({ symbol }: TradingChartProps) {
-  const [selectedTimeframe, setSelectedTimeframe] = useState("5m");
-  const [chartData, setChartData] = useState<Array<{x: number, y: number}>>([]);
-  const chartRef = useRef<ChartJS<"line"> | null>(null);
+  const [selectedTimeframe, setSelectedTimeframe] = useState('1h');
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<any>(null);
+  const candlestickSeriesRef = useRef<any>(null);
+  const volumeSeriesRef = useRef<any>(null);
 
-  // Fetch live market data
-  const { data: marketsResponse } = useQuery({
-    queryKey: ['/api/markets'],
-    refetchInterval: 1000,
+  // Extract base symbol for Hyperliquid
+  const baseSymbol = symbol.split('/')[0].replace('-PERP', '');
+
+  // Fetch real Hyperliquid market data (current price)
+  const { data: marketData, isLoading: isLoadingMarket } = useQuery({
+    queryKey: ['/api/hyperliquid/market', baseSymbol],
+    queryFn: async () => {
+      const response = await fetch(`/api/hyperliquid/market/${baseSymbol}`);
+      if (!response.ok) throw new Error('Failed to fetch market data');
+      return response.json();
+    },
+    refetchInterval: 2000,
+    enabled: !!baseSymbol,
   });
 
-  const markets = marketsResponse?.data || marketsResponse || [];
-  
-  const symbolData = markets.find((market: any) => {
-    if (!market || !market.symbol) return false;
-    const marketSymbol = market.symbol.toLowerCase();
-    const targetSymbol = symbol.toLowerCase();
-    return marketSymbol === targetSymbol || 
-           marketSymbol.replace('/', '') === targetSymbol.replace('/', '');
-  });
-
-  const currentPrice = symbolData ? parseFloat(symbolData.price) || 0 : 50000;
-  const priceChange = symbolData ? parseFloat(symbolData.change24h) || 0 : 0;
-  const high24h = symbolData ? parseFloat(symbolData.high24h) || 0 : 0;
-  const low24h = symbolData ? parseFloat(symbolData.low24h) || 0 : 0;
-  const volume24h = symbolData ? parseFloat(symbolData.volume24h) || 0 : 0;
-  const marketCap = symbolData ? parseFloat(symbolData.marketCap) || 0 : 0;
-
-  const timeframes = ["1m", "5m", "1h", "1d"];
-
-  // Initialize chart data ONCE
-  useEffect(() => {
-    if (currentPrice <= 0) return;
-
-    const initializeData = () => {
-      const data = [];
-      const basePrice = currentPrice;
-      let price = basePrice;
-      const now = Date.now();
+  // Fetch user's open orders for this symbol
+  const { data: userOrders, isLoading: isLoadingOrders } = useQuery({
+    queryKey: ['/api/hyperliquid/orders', baseSymbol],
+    queryFn: async () => {
+      const walletAddress = localStorage.getItem('hyperliquid_wallet');
+      if (!walletAddress) return [];
       
-      // Generate initial 30 data points with timestamps
-      for (let i = 29; i >= 0; i--) {
-        const volatility = basePrice * 0.015;
-        const change = (Math.random() - 0.5) * volatility;
-        price = Math.max(price + change, basePrice * 0.85);
+      const response = await fetch(`/api/hyperliquid/orders/${walletAddress}`);
+      if (!response.ok) return [];
+      
+      const orders = await response.json();
+      return orders.filter((order: any) => 
+        order.symbol === baseSymbol || 
+        order.symbol === symbol.replace('/', '') ||
+        order.symbol === symbol
+      );
+    },
+    refetchInterval: 5000,
+    enabled: !!baseSymbol,
+  });
+
+  // Fetch user's trade history (executed orders) for execution indicators
+  const { data: tradeHistory, isLoading: isLoadingTrades } = useQuery({
+    queryKey: ['/api/hyperliquid/trades', baseSymbol],
+    queryFn: async () => {
+      const walletAddress = localStorage.getItem('hyperliquid_wallet');
+      if (!walletAddress) return [];
+
+      try {
+        const response = await fetch(`/api/hyperliquid/trades/${walletAddress}?symbol=${baseSymbol}`);
+        if (!response.ok) {
+          // Fallback to filled orders
+          const ordersResponse = await fetch(`/api/hyperliquid/orders/${walletAddress}`);
+          if (ordersResponse.ok) {
+            const orders = await ordersResponse.json();
+            return orders.filter((order: any) => 
+              (order.symbol === baseSymbol || order.symbol === symbol.replace('/', '')) &&
+              (order.status === 'filled' || order.filled)
+            ).map((order: any) => ({
+              id: order.id || order.oid,
+              price: parseFloat(order.price || order.limitPx || '0'),
+              amount: parseFloat(order.amount || order.sz || '0'),
+              side: order.side,
+              timestamp: order.timestamp || Date.now(),
+              type: order.orderType || 'market',
+            }));
+          }
+          return [];
+        }
         
-        const timestamp = now - (i * 5000); // 5-second intervals
-        
-        data.push({
-          x: timestamp,
-          y: parseFloat(price.toFixed(2))
-        });
+        const trades = await response.json();
+        return trades.map((trade: any) => ({
+          id: trade.id,
+          price: parseFloat(trade.price || '0'),
+          amount: parseFloat(trade.amount || '0'),
+          side: trade.side,
+          timestamp: trade.timestamp,
+          type: trade.type || 'market',
+        }));
+      } catch (error) {
+        console.error('❌ Error fetching trade history:', error);
+        return [];
       }
-      
-      setChartData(data);
+    },
+    refetchInterval: 3000,
+    enabled: !!baseSymbol,
+  });
+
+  // Fetch real historical candle data from Hyperliquid
+  const { data: candleResponse, isLoading: isLoadingCandles, error: candleError } = useQuery({
+    queryKey: ['/api/hyperliquid/candles', baseSymbol, selectedTimeframe],
+    queryFn: async () => {
+      const url = `/api/hyperliquid/candles/${baseSymbol}?interval=${timeframeMap[selectedTimeframe as keyof typeof timeframeMap]}&limit=100`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch candle data');
+      return response.json();
+    },
+    refetchInterval: 5000,
+    enabled: !!baseSymbol,
+  });
+
+  // Initialize Lightweight Charts v5.0
+  useEffect(() => {
+    if (!chartContainerRef.current) return;
+
+    // Create the chart using the correct v5.0 API
+    const chart = createChart(chartContainerRef.current, {
+      width: chartContainerRef.current.clientWidth,
+      height: 400,
+      layout: {
+        background: { type: ColorType.Solid, color: '#0f172a' },
+        textColor: '#94a3b8',
+        fontSize: 12,
+      },
+      grid: {
+        vertLines: { color: '#1e293b' },
+        horzLines: { color: '#1e293b' },
+      },
+      crosshair: {
+        mode: 1,
+        vertLine: {
+          color: '#475569',
+          labelBackgroundColor: '#1e293b',
+        },
+        horzLine: {
+          color: '#475569',
+          labelBackgroundColor: '#1e293b',
+        },
+      },
+      rightPriceScale: {
+        borderColor: '#1e293b',
+        scaleMargins: {
+          top: 0.1,
+          bottom: 0.1,
+        },
+      },
+      timeScale: {
+        borderColor: '#1e293b',
+        timeVisible: true,
+        secondsVisible: false,
+      },
+    });
+
+    // Create candlestick series using the correct v5.0 API
+    const candlestickSeries = chart.addSeries(CandlestickSeries, {
+      upColor: '#22c55e',
+      downColor: '#ef4444',
+      borderVisible: false,
+      wickUpColor: '#22c55e',
+      wickDownColor: '#ef4444',
+    });
+
+    // Create volume series using the correct v5.0 API
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      color: '#64748b',
+      priceFormat: {
+        type: 'volume',
+      },
+      priceScaleId: '',
+    });
+
+    chartRef.current = chart;
+    candlestickSeriesRef.current = candlestickSeries;
+    volumeSeriesRef.current = volumeSeries;
+
+    // Handle resize
+    const handleResize = () => {
+      if (chartContainerRef.current && chart) {
+        chart.applyOptions({ width: chartContainerRef.current.clientWidth });
+      }
     };
 
-    // Only initialize once when we first get currentPrice
-    if (chartData.length === 0) {
-      initializeData();
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      chart.remove();
+    };
+  }, []);
+
+  // Update chart data when candles are loaded
+  useEffect(() => {
+    if (!candlestickSeriesRef.current || !volumeSeriesRef.current || !candleResponse?.candles) return;
+
+    try {
+      // Format candle data for Lightweight Charts
+      const candleData = candleResponse.candles.map((candle: any) => ({
+        time: candle.time / 1000, // Convert to Unix timestamp
+        open: parseFloat(candle.open),
+        high: parseFloat(candle.high),
+        low: parseFloat(candle.low),
+        close: parseFloat(candle.close),
+      }));
+
+      // Format volume data for Lightweight Charts
+      const volumeData = candleResponse.candles.map((candle: any) => ({
+        time: candle.time / 1000,
+        value: parseFloat(candle.volume || '0'),
+        color: parseFloat(candle.close) >= parseFloat(candle.open) ? '#22c55e' : '#ef4444',
+      }));
+
+      // Set data to series
+      candlestickSeriesRef.current.setData(candleData);
+      volumeSeriesRef.current.setData(volumeData);
+
+      // Fit content to show all data
+      if (chartRef.current) {
+        chartRef.current.timeScale().fitContent();
+      }
+
+      console.log('✅ Chart data updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating chart data:', error);
     }
-  }, [currentPrice, chartData.length]);
+  }, [candleResponse]);
 
-  // Add real-time updates with FIXED time window
+  // Add order execution indicators
   useEffect(() => {
-    if (chartData.length === 0 || !chartRef.current || currentPrice <= 0) return;
+    if (!chartRef.current || !tradeHistory || tradeHistory.length === 0) return;
 
-    const addRealTimePoint = () => {
-      const chart = chartRef.current;
-      if (!chart) return;
+    try {
+      // Add markers for executed trades
+      const markers = tradeHistory.map((trade: any) => ({
+        time: Math.floor(trade.timestamp / 1000),
+        position: trade.side === 'buy' ? 'belowBar' : 'aboveBar',
+        color: trade.side === 'buy' ? '#22c55e' : '#ef4444',
+        shape: 'circle',
+        text: `${trade.side.toUpperCase()} ${trade.amount}`,
+      }));
 
-      const now = Date.now();
-      const realPrice = parseFloat(currentPrice.toFixed(2));
-
-      // Create new data point
-      const newPoint = {
-        x: now,
-        y: realPrice
-      };
-
-      // Add to chart dataset
-      if (chart.data.datasets[0] && chart.data.datasets[0].data) {
-        chart.data.datasets[0].data.push(newPoint);
-
-        // Remove old data points (keep last 30)
-        if (chart.data.datasets[0].data.length > 30) {
-          chart.data.datasets[0].data.shift();
-        }
+      // Add markers to candlestick series
+      if (candlestickSeriesRef.current) {
+        candlestickSeriesRef.current.setMarkers(markers);
       }
 
-      // Update time window - fixed 150-second sliding window
-      const windowSize = 150000; // 150 seconds
-      if (chart.options.scales && chart.options.scales.x) {
-        chart.options.scales.x.min = now - windowSize;
-        chart.options.scales.x.max = now;
-      }
+      console.log('✅ Order execution indicators added');
+    } catch (error) {
+      console.error('❌ Error adding order execution indicators:', error);
+    }
+  }, [tradeHistory]);
 
-      // Update chart with no animation
-      chart.update('none');
+  // Extract real data from Hyperliquid
+  const currentPrice = marketData?.price || 0;
+  const priceChange = marketData?.change24h || 0;
+  const high24h = marketData?.high24h || 0;
+  const low24h = marketData?.low24h || 0;
+  const volume24h = marketData?.volume24h || 0;
 
-      // Update state
-      setChartData(prevData => {
-        const newData = [...prevData, newPoint];
-        return newData.slice(-30);
-      });
-    };
-
-    const interval = setInterval(addRealTimePoint, 5000);
-    return () => clearInterval(interval);
-  }, [currentPrice, chartData.length]);
-
-  // Chart configuration
-  const chartConfig = {
-    datasets: [
-      {
-        label: `${symbol} Price`,
-        data: chartData,
-        borderColor: '#8b5cf6',
-        backgroundColor: 'rgba(139, 92, 246, 0.1)',
-        borderWidth: 2,
-        fill: true,
-        tension: 0.2,
-        pointRadius: 0,
-        pointHoverRadius: 4,
-        pointHoverBackgroundColor: '#8b5cf6',
-        pointHoverBorderColor: '#ffffff',
-        pointHoverBorderWidth: 2,
-      },
-    ],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: {
-      intersect: false,
-      mode: 'index' as const,
-    },
-    plugins: {
-      legend: {
-        display: false,
-      },
-      tooltip: {
-        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-        titleColor: '#d1d5db',
-        bodyColor: '#4d5e78ff',
-        borderColor: 'rgba(139, 92, 246, 0.3)',
-        borderWidth: 1,
-        callbacks: {
-          label: function(context: any) {
-            return `${symbol}: $${context.parsed.y.toLocaleString()}`;
-          }
-        }
-      },
-    },
-    scales: {
-      x: {
-        type: 'time' as const,
-        min: Date.now() - 150000,
-        max: Date.now(),
-        display: true,
-        grid: {
-          color: 'rgba(139, 92, 246, 0.1)',
-          drawBorder: false,
-        },
-        ticks: {
-          color: '#d1d5db',
-          autoSkip: true,
-          maxTicksLimit: 6,
-          font: {
-            size: 11,
-          },
-        },
-        time: {
-          displayFormats: {
-            second: 'HH:mm:ss',
-            minute: 'HH:mm'
-          }
-        }
-      },
-      y: {
-        display: true,
-        position: 'right' as const,
-        grid: {
-          color: 'rgba(139, 92, 246, 0.1)',
-          drawBorder: false,
-        },
-        ticks: {
-          color: '#6b7b91ff',
-          callback: function(value: any) {
-            return '$' + value.toLocaleString();
-          },
-          font: {
-            size: 11,
-          },
-        },
-      },
-    },
-    animation: {
-      duration: 0,
-    },
-    transitions: {
-      active: {
-        animation: {
-          duration: 0,
-        }
-      }
-    },
-  };
-
-  // Helper functions
   const formatVolume = (vol: number) => {
     if (vol === 0) return '--';
-    if (vol > 1000000) return (vol / 1000000).toFixed(1) + 'M';
-    if (vol > 1000) return (vol / 1000).toFixed(1) + 'K';
-    return vol.toLocaleString(undefined, { maximumFractionDigits: 0 });
+    if (vol >= 1e9) return `$${(vol / 1e9).toFixed(2)}B`;
+    if (vol >= 1e6) return `$${(vol / 1e6).toFixed(2)}M`;
+    if (vol >= 1e3) return `$${(vol / 1e3).toFixed(2)}K`;
+    return `$${vol.toFixed(2)}`;
   };
 
   const formatMarketCap = (cap: number) => {
-    if (cap === 0) return '--';
-    if (cap > 1e9) return '$' + (cap / 1e9).toFixed(1) + 'B';
-    if (cap > 1e6) return '$' + (cap / 1e6).toFixed(1) + 'M';
-    return '$' + cap.toLocaleString();
+    const estimatedCap = currentPrice * 19500000;
+    if (estimatedCap === 0) return '--';
+    if (estimatedCap >= 1e12) return `$${(estimatedCap / 1e12).toFixed(2)}T`;
+    if (estimatedCap >= 1e9) return `$${(estimatedCap / 1e9).toFixed(2)}B`;
+    if (estimatedCap >= 1e6) return `$${(estimatedCap / 1e6).toFixed(2)}M`;
+    return `$${estimatedCap.toFixed(2)}`;
+  };
+
+  const isLoading = isLoadingMarket || isLoadingCandles || isLoadingTrades;
+
+  // Calculate order execution statistics
+  const orderStats = {
+    totalTrades: tradeHistory?.length || 0,
+    buyTrades: tradeHistory?.filter((t: any) => t.side === 'buy').length || 0,
+    sellTrades: tradeHistory?.filter((t: any) => t.side === 'sell').length || 0,
+    totalVolume: tradeHistory?.reduce((sum: number, t: any) => sum + (t.amount * t.price), 0) || 0,
+    avgPrice: tradeHistory?.length > 0 
+      ? tradeHistory.reduce((sum: number, t: any) => sum + t.price, 0) / tradeHistory.length 
+      : 0,
   };
 
   return (
@@ -273,16 +315,29 @@ export default function TradingChart({ symbol }: TradingChartProps) {
               </CardTitle>
               <div className="flex items-center space-x-2">
                 <span className="text-2xl font-mono">
-                  ${currentPrice > 0 ? currentPrice.toLocaleString(undefined, { 
-                    minimumFractionDigits: 2, 
-                    maximumFractionDigits: 2 
-                  }) : '--'}
+                  {isLoadingMarket ? (
+                    <span className="animate-pulse">Loading...</span>
+                  ) : currentPrice > 0 ? (
+                    `$${currentPrice.toLocaleString(undefined, { 
+                      minimumFractionDigits: 2, 
+                      maximumFractionDigits: 2 
+                    })}`
+                  ) : (
+                    '--'
+                  )}
                 </span>
                 <span className={`flex items-center text-sm font-medium ${
                   priceChange >= 0 ? 'text-green-500' : 'text-red-500'
                 }`}>
-                  {priceChange >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
-                  {priceChange !== 0 ? (priceChange >= 0 ? '+' : '') + priceChange.toFixed(2) + '%' : '+0.00%'}
+                  {priceChange >= 0 ? (
+                    <TrendingUp className="w-4 h-4 mr-1" />
+                  ) : (
+                    <TrendingDown className="w-4 h-4 mr-1" />
+                  )}
+                  {priceChange !== 0 
+                    ? `${priceChange >= 0 ? '+' : ''}${priceChange.toFixed(2)}%`
+                    : '+0.00%'
+                  }
                 </span>
               </div>
             </div>
@@ -315,50 +370,118 @@ export default function TradingChart({ symbol }: TradingChartProps) {
               ))}
             </div>
 
-            {/* Chart Container */}
-            <div className="relative h-96 w-full bg-slate-900/50 rounded-lg overflow-hidden p-4">
-              {chartData.length > 0 ? (
-                <Line ref={chartRef} data={chartConfig} options={chartOptions} />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-purple-400">
+            {/* Lightweight Charts v5.0 Container */}
+            <div className="relative">
+              <div 
+                ref={chartContainerRef} 
+                className="h-96 w-full bg-slate-900/50 rounded-lg border border-slate-700"
+              />
+              
+              {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 rounded-lg">
+                  <div className="text-purple-400 flex flex-col items-center">
                     <BarChart3 className="w-8 h-8 animate-pulse" />
-                    <p className="text-sm mt-2">Loading Chart.js chart...</p>
+                    <p className="text-sm mt-2">Loading professional chart...</p>
                   </div>
                 </div>
               )}
             </div>
+
+            {/* Order Execution Statistics */}
+            {orderStats.totalTrades > 0 && (
+              <div className="pt-4 border-t">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Order Executions on Chart</h4>
+                  <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1">
+                      <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                      <span className="text-xs text-green-500">Buy Executions</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                      <span className="text-xs text-red-500">Sell Executions</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Executions</p>
+                    <p className="text-lg font-semibold">
+                      {orderStats.totalTrades}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Buy Orders</p>
+                    <p className="text-lg font-semibold text-green-500">
+                      {orderStats.buyTrades}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Sell Orders</p>
+                    <p className="text-lg font-semibold text-red-500">
+                      {orderStats.sellTrades}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Avg Exec Price</p>
+                    <p className="text-lg font-semibold">
+                      ${orderStats.avgPrice.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Chart Statistics */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
               <div>
                 <p className="text-sm text-muted-foreground">24h High</p>
                 <p className="text-lg font-semibold text-green-500">
-                  ${high24h > 0 ? high24h.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  }) : '--'}
+                  {isLoadingMarket ? (
+                    <span className="animate-pulse">--</span>
+                  ) : high24h > 0 ? (
+                    `$${high24h.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}`
+                  ) : (
+                    '--'
+                  )}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">24h Low</p>
                 <p className="text-lg font-semibold text-red-500">
-                  ${low24h > 0 ? low24h.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  }) : '--'}
+                  {isLoadingMarket ? (
+                    <span className="animate-pulse">--</span>
+                  ) : low24h > 0 ? (
+                    `$${low24h.toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    })}`
+                  ) : (
+                    '--'
+                  )}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">24h Volume</p>
                 <p className="text-lg font-semibold">
-                  {formatVolume(volume24h)}
+                  {isLoadingMarket ? (
+                    <span className="animate-pulse">--</span>
+                  ) : (
+                    formatVolume(volume24h)
+                  )}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Market Cap</p>
                 <p className="text-lg font-semibold">
-                  {formatMarketCap(marketCap)}
+                  {isLoadingMarket ? (
+                    <span className="animate-pulse">--</span>
+                  ) : (
+                    formatMarketCap(currentPrice)
+                  )}
                 </p>
               </div>
             </div>
@@ -366,7 +489,7 @@ export default function TradingChart({ symbol }: TradingChartProps) {
         </Card>
       </div>
 
-      {/* Quick Trade Panel - Takes 1 column */}
+      {/* Quick Trade Panel */}
       <div className="lg:col-span-1">
         <QuickTradePanel 
           symbol={symbol} 

@@ -87,11 +87,9 @@ router.post('/webhook', async (req, res) => {
   try {
     const signature = req.get('stripe-signature');
     
-    if (!signature) {
-      return res.status(400).json({ error: 'Missing Stripe signature' });
-    }
-
-    const result = await stripePaymentService.handleWebhook(req.body, signature);
+    // Allow webhook processing without signature if no webhook secret is configured
+    // This is useful for testing with Stripe CLI
+    const result = await stripePaymentService.handleWebhook(req.body, signature || '');
 
     res.json(result);
   } catch (error) {
@@ -102,7 +100,7 @@ router.post('/webhook', async (req, res) => {
 
 // Get publishable key for frontend
 router.get('/config', (req, res) => {
-  const publishableKey = process.env.VITE_STRIPE_PUBLIC_KEY || 'pk_test_51RgpjICv8i69yuqzH9YNbzAWZWoStFRRb69Gw9DOT8KHrcOj7tj2DqQOJAhLA2jxvcLGVP1EeCCZm6Oycw0PIR9Z00xdRsazWo';
+  const publishableKey = process.env.VITE_STRIPE_LIVE_KEY || 'pk_test_51RgpjICv8i69yuqzH9YNbzAWZWoStFRRb69Gw9DOT8KHrcOj7tj2DqQOJAhLA2jxvcLGVP1EeCCZm6Oycw0PIR9Z00xdRsazWo';
   
   res.json({
     publishableKey,

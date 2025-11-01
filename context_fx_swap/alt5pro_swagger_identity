@@ -1,0 +1,1115 @@
+GET
+/admin/{securityGroup}/reset-password
+Parameters
+Try it out
+Name	Description
+securityGroup *
+string
+(path)
+securityGroup
+Responses
+Code	Description	Links
+200	
+Success
+
+
+POST
+/admin/{securityGroup}/reset-password
+Initiate first step in password reset sequence for admin - generate and send reset password email.
+Parameters
+Try it out
+Name	Description
+securityGroup *
+string
+(path)
+securityGroup
+Request body
+
+application/json
+Example Value
+Schema
+{
+  "email": "user@example.com"
+}
+Responses
+Code	Description	Links
+200	
+Success
+
+GET
+/api/v2/info
+Parameters
+Try it out
+No parameters
+
+Responses
+
+
+POST
+/api/v2/identity/{securityGroup}/users/password/reset
+Initiate first step in password reset sequence - generate and send reset password email.
+Parameters
+Try it out
+Name	Description
+securityGroup *
+string
+(path)
+securityGroup
+Request body
+
+application/json
+Example Value
+Schema
+{
+  "email": "user@example.com"
+}
+Responses
+Code	Description	Links
+200	
+Success
+
+POST
+/api/v2/identity/{securityGroup}/users/password
+Change password as authenticated or anonymous user. <br>To change password as authenticated user fill Qoden.Identity.ResetPasswordRequest.Authenticated part of the request and send it together with authentication cookie. This operation requires authenticator code if authenticator enabled. When successful this operation invalidates authentication cookie and generates new one.<br>To reset password as anonymous first start it with 'reset' operation and then fill Qoden.Identity.ResetPasswordRequest.Anonymous part of the request and call this operation.
+Parameters
+Try it out
+Name	Description
+securityGroup *
+string
+(path)
+securityGroup
+Request body
+
+application/json
+Example Value
+Schema
+{
+  "anonymous": {
+    "token": "string",
+    "email": "user@example.com",
+    "newPassword": "string"
+  },
+  "authenticated": {
+    "oldPassword": "string",
+    "newPassword": "string"
+  }
+}
+Responses
+Code	Description	Links
+401	
+Token required. 20010
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+403	
+User disabled. 20001
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+404	
+User not found. 10002
+
+No links
+422	
+Unprocessable password. 10000
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+500	
+Server Error
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+
+POST
+/api/v2/identity/{securityGroup}/users/signin
+Generate session cookie or initiate 2FA check depending on user settings.
+This method may return Authentication cookie in 'Set-Cookie' header. HTTP 200 OK with body indicating that 2FA is required. In this case 2FA cookie is sent in 'Set-Cookie' header. User should obtain second factor token and send it in subsequent request to 'signin/2fa' endpoint together with 2FA cookie. If user configured with email as 2FA channel then email with token is sent. Otherwise user expected to get token from google auth or similar app. Error code with error details.
+
+Parameters
+Try it out
+Name	Description
+securityGroup *
+string
+(path)
+securityGroup
+Request body
+
+application/json
+Example Value
+Schema
+{
+  "email": "user@example.com",
+  "password": "string",
+  "rememberMe": true
+}
+Responses
+Code	Description	Links
+200	
+Login successful, session cookie or 2fa cookie generated.
+
+Media type
+
+application/json
+Controls Accept header.
+Example Value
+Schema
+{
+  "message": "string",
+  "secondFactorRequired": true,
+  "secondFactorSent": true,
+  "secondFactorResendCooldownTill": "2025-10-16T13:37:37.419Z",
+  "provider": "string",
+  "user": {
+    "id": "string",
+    "isEmailConfirmed": true,
+    "isPhoneConfirmed": true,
+    "registrationDate": "2025-10-16T13:37:37.419Z",
+    "lastLoginDate": "2025-10-16T13:37:37.419Z",
+    "status": 0,
+    "userName": "string",
+    "roles": [
+      "string"
+    ],
+    "email": "string",
+    "phoneNumber": "string",
+    "twoFactorEnabled": true,
+    "authenticatorEnabled": true,
+    "firstName": "string",
+    "lastName": "string",
+    "middleName": "string",
+    "country": {
+      "id": "string",
+      "name": "string",
+      "code": "string"
+    },
+    "company": "string",
+    "address": "string",
+    "flag": "string",
+    "notes": "string",
+    "ownerEntityId": "string",
+    "occupation": "string",
+    "dateOfBirth": "2025-10-16T13:37:37.419Z"
+  }
+}
+No links
+400	
+Bad Request
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+403	
+User cannot be found with provided email and password, or it is frozen, locked-out or disabled.
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+404	
+Not Found
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+422	
+Client Error
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+
+POST
+/api/v2/identity/{securityGroup}/users/signin/2fa
+Finish login by confirming second factor. When successful operation returns authentication cookie in 'Set-Cookie' header.
+Parameters
+Try it out
+Name	Description
+securityGroup *
+string
+(path)
+securityGroup
+Request body
+
+application/json
+Example Value
+Schema
+{
+  "verificationCode": "string",
+  "rememberMe": true
+}
+Responses
+Code	Description	Links
+200	
+Second factor confirmed, session cookie generated.
+
+Media type
+
+application/json
+Controls Accept header.
+Example Value
+Schema
+{
+  "id": "string",
+  "isEmailConfirmed": true,
+  "isPhoneConfirmed": true,
+  "registrationDate": "2025-10-16T13:38:03.269Z",
+  "lastLoginDate": "2025-10-16T13:38:03.269Z",
+  "status": 0,
+  "userName": "string",
+  "roles": [
+    "string"
+  ],
+  "email": "string",
+  "phoneNumber": "string",
+  "twoFactorEnabled": true,
+  "authenticatorEnabled": true,
+  "firstName": "string",
+  "lastName": "string",
+  "middleName": "string",
+  "country": {
+    "id": "string",
+    "name": "string",
+    "code": "string"
+  },
+  "company": "string",
+  "address": "string",
+  "flag": "string",
+  "notes": "string",
+  "ownerEntityId": "string",
+  "occupation": "string",
+  "dateOfBirth": "2025-10-16T13:38:03.269Z"
+}
+No links
+400	
+Invalid request or bad 2fa cookie.
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+403	
+User is frozen, locked-out or terminated.
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+422	
+Client Error
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+
+POST
+/api/v2/identity/{securityGroup}/users/signin/2fa/resend
+Resend 2FA token.
+Parameters
+Try it out
+Name	Description
+securityGroup *
+string
+(path)
+securityGroup
+Responses
+Code	Description	Links
+200	
+2FA code resent.
+
+Media type
+
+application/json
+Controls Accept header.
+Example Value
+Schema
+{
+  "message": "string",
+  "secondFactorRequired": true,
+  "secondFactorSent": true,
+  "secondFactorResendCooldownTill": "2025-10-16T13:38:28.572Z",
+  "provider": "string",
+  "user": {
+    "id": "string",
+    "isEmailConfirmed": true,
+    "isPhoneConfirmed": true,
+    "registrationDate": "2025-10-16T13:38:28.572Z",
+    "lastLoginDate": "2025-10-16T13:38:28.572Z",
+    "status": 0,
+    "userName": "string",
+    "roles": [
+      "string"
+    ],
+    "email": "string",
+    "phoneNumber": "string",
+    "twoFactorEnabled": true,
+    "authenticatorEnabled": true,
+    "firstName": "string",
+    "lastName": "string",
+    "middleName": "string",
+    "country": {
+      "id": "string",
+      "name": "string",
+      "code": "string"
+    },
+    "company": "string",
+    "address": "string",
+    "flag": "string",
+    "notes": "string",
+    "ownerEntityId": "string",
+    "occupation": "string",
+    "dateOfBirth": "2025-10-16T13:38:28.572Z"
+  }
+}
+No links
+400	
+Invalid request or bad 2fa cookie.
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+403	
+User is frozen, locked-out or terminated.
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+422	
+Client Error
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+429	
+2FA code resend requested too often.
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+
+GET
+/admin/login
+Parameters
+Try it out
+No parameters
+
+Responses
+
+
+POST
+/admin/{securityGroup}/login
+Parameters
+Try it out
+Name	Description
+securityGroup *
+string
+(path)
+securityGroup
+Request body
+
+multipart/form-data
+Email *
+string($email)
+Password *
+string
+RememberMe *
+boolean
+Responses
+Code	Description	Links
+200	
+Success
+
+Media type
+
+application/json
+Controls Accept header.
+Example Value
+Schema
+{
+  "message": "string",
+  "secondFactorRequired": true,
+  "secondFactorSent": true,
+  "secondFactorResendCooldownTill": "2025-10-16T13:39:04.878Z",
+  "provider": "string",
+  "user": {
+    "id": "string",
+    "isEmailConfirmed": true,
+    "isPhoneConfirmed": true,
+    "registrationDate": "2025-10-16T13:39:04.878Z",
+    "lastLoginDate": "2025-10-16T13:39:04.878Z",
+    "status": 0,
+    "userName": "string",
+    "roles": [
+      "string"
+    ],
+    "email": "string",
+    "phoneNumber": "string",
+    "twoFactorEnabled": true,
+    "authenticatorEnabled": true,
+    "firstName": "string",
+    "lastName": "string",
+    "middleName": "string",
+    "country": {
+      "id": "string",
+      "name": "string",
+      "code": "string"
+    },
+    "company": "string",
+    "address": "string",
+    "flag": "string",
+    "notes": "string",
+    "ownerEntityId": "string",
+    "occupation": "string",
+    "dateOfBirth": "2025-10-16T13:39:04.878Z"
+  }
+}
+
+POST
+/admin/{securityGroup}/login/2fa
+Parameters
+Try it out
+Name	Description
+securityGroup *
+string
+(path)
+securityGroup
+Request body
+
+multipart/form-data
+VerificationCode *
+string
+RememberMe *
+boolean
+Responses
+Code	Description	Links
+200	
+Success
+
+Media type
+
+application/json
+Controls Accept header.
+Example Value
+Schema
+{
+  "id": "string",
+  "isEmailConfirmed": true,
+  "isPhoneConfirmed": true,
+  "registrationDate": "2025-10-16T13:39:19.831Z",
+  "lastLoginDate": "2025-10-16T13:39:19.831Z",
+  "status": 0,
+  "userName": "string",
+  "roles": [
+    "string"
+  ],
+  "email": "string",
+  "phoneNumber": "string",
+  "twoFactorEnabled": true,
+  "authenticatorEnabled": true,
+  "firstName": "string",
+  "lastName": "string",
+  "middleName": "string",
+  "country": {
+    "id": "string",
+    "name": "string",
+    "code": "string"
+  },
+  "company": "string",
+  "address": "string",
+  "flag": "string",
+  "notes": "string",
+  "ownerEntityId": "string",
+  "occupation": "string",
+  "dateOfBirth": "2025-10-16T13:39:19.831Z"
+}
+
+POST
+/api/v2/identity/{securityGroup}/users/signup
+Create new user, send authentication cookie and send email confirmation request.
+Parameters
+Try it out
+Name	Description
+securityGroup *
+string
+(path)
+securityGroup
+Request body
+
+application/json
+Example Value
+Schema
+{
+  "email": "string",
+  "password": "string",
+  "firstName": "string",
+  "lastName": "string",
+  "phone": "string",
+  "referrerId": "string",
+  "countryId": "string"
+}
+Responses
+Code	Description	Links
+422	
+Invalid request data.
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+
+POST
+/api/v2/identity/{securityGroup}/users/signup/business
+Create new user and company with this user as owner
+Parameters
+Try it out
+Name	Description
+securityGroup *
+string
+(path)
+securityGroup
+Request body
+
+application/json
+Example Value
+Schema
+{
+  "personalInfo": {
+    "email": "string",
+    "password": "string",
+    "firstName": "string",
+    "lastName": "string",
+    "phone": "string",
+    "referrerId": "string",
+    "countryId": "string"
+  },
+  "businessInfo": {
+    "companyName": "string",
+    "doingBusinessAs": "string",
+    "registrationNumber": "string",
+    "dateOfIncorporation": "2025-10-16T13:39:56.246Z",
+    "companyPhone": "string",
+    "jurisdiction": "string",
+    "address": "string",
+    "city": "string",
+    "stateOrProvince": "string",
+    "zipOrPostalCode": "string",
+    "website": "string",
+    "glei": "string",
+    "duns": "string",
+    "ein": "string",
+    "sic": "string",
+    "natureOfPrincipalBusiness": "string"
+  }
+}
+
+GET
+/api/v2/identity/{securityGroup}/users/signup/confirm-email
+Confirm email, sign in user (generate authentication cookie) and redirect user agent to success or error url specified in sign up options ( Qoden.Identity.SignUpOptions.EmailConfirmationRedirectUrl or Qoden.Identity.SignUpOptions.EmailConfirmationErrorRedirectUrl).
+Parameters
+Try it out
+Name	Description
+email
+string
+(query)
+email
+token
+string
+(query)
+token
+securityGroup *
+string
+(path)
+securityGroup
+Responses
+Code	Description	Links
+400	
+User not found. 20000
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+403	
+User disabled. 20001
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+
+POST
+/api/v2/identity/{securityGroup}/users/signup/confirm-email
+Confirm email and sign in user (generate authentication cookie).
+Parameters
+Try it out
+Name	Description
+securityGroup *
+string
+(path)
+securityGroup
+Request body
+
+application/json
+Example Value
+Schema
+{
+  "token": "string",
+  "email": "user@example.com"
+}
+Responses
+Code	Description	Links
+400	
+User not found. 20000
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+403	
+user disabled. 20001
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+422	
+Invalid request data. -1
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+
+POST
+/api/v2/identity/{securityGroup}/users/signup/resend-email
+Resend confirmation email if user email not confirmed.
+Parameters
+Try it out
+Name	Description
+securityGroup *
+string
+(path)
+securityGroup
+Request body
+
+application/json
+Example Value
+Schema
+{
+  "email": "user@example.com"
+}
+Responses
+Code	Description	Links
+400	
+User not found. 20000
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+403	
+Email already confirmed. 20003
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}
+No links
+422	
+Invalid request data. -1
+
+Media type
+
+application/json
+Example Value
+Schema
+{
+  "errorCode": 0,
+  "message": "string",
+  "errors": [
+    {
+      "key": "string",
+      "code": "string",
+      "message": "string",
+      "additionalProp1": "string",
+      "additionalProp2": "string",
+      "additionalProp3": "string"
+    }
+  ]
+}

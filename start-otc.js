@@ -3,13 +3,13 @@
 const { spawn } = require('child_process');
 const path = require('path');
 
-console.log('Starting OTC Desk Pro on port 5001...');
+console.log('Starting OTC Desk Pro on port 5000...');
 
 const otcServer = spawn('tsx', ['server/otc-index.ts'], {
   env: {
     ...process.env,
     NODE_ENV: 'development',
-    PORT: '5001'
+    PORT: '5000'
   },
   stdio: 'inherit',
   cwd: process.cwd()

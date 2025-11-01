@@ -535,46 +535,8 @@ class TradingEngineService extends EventEmitter {
     return mockTrades;
   }
 
-  // Get order book for a symbol 
-  getOrderBook(symbol: string): any {
-    const orders = this.orderBooks.get(symbol) || [];
-    const buyOrders = orders.filter(o => o.side === 'buy' && o.status === 'pending')
-      .sort((a, b) => (b.price || 0) - (a.price || 0)) // Highest price first
-      .slice(0, 10);
-    const sellOrders = orders.filter(o => o.side === 'sell' && o.status === 'pending')
-      .sort((a, b) => (a.price || 0) - (b.price || 0)) // Lowest price first  
-      .slice(0, 10);
-
-    // Mock order book if no real orders
-    if (buyOrders.length === 0 && sellOrders.length === 0) {
-      const basePrice = 64500;
-      return {
-        symbol,
-        bids: [
-          [basePrice - 10, 0.15],
-          [basePrice - 20, 0.22],
-          [basePrice - 30, 0.18],
-          [basePrice - 40, 0.31],
-          [basePrice - 50, 0.09]
-        ],
-        asks: [
-          [basePrice + 10, 0.12],
-          [basePrice + 20, 0.28],
-          [basePrice + 30, 0.16],
-          [basePrice + 40, 0.24],
-          [basePrice + 50, 0.19]
-        ],
-        lastUpdated: new Date().toISOString()
-      };
-    }
-
-    return {
-      symbol,
-      bids: buyOrders.map(o => [o.price, o.quantity]),
-      asks: sellOrders.map(o => [o.price, o.quantity]),
-      lastUpdated: new Date().toISOString()
-    };
-  }
+  
+  
 }
 
 export const tradingEngineService = new TradingEngineService();

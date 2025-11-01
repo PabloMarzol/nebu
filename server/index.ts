@@ -8,6 +8,8 @@ import walletAuthRoutes from './routes/walletAuth';
 
 import hyperliquidRoutes from './routes/hyperliquid';
 console.log('✅ Hyperliquid routes imported:', typeof hyperliquidRoutes);
+import fxSwapRoutes from './routes/fx_swap_routes';
+console.log('✅ FX Swap routes imported:', typeof fxSwapRoutes);
 import { verifyWalletAuth } from './middleware/walletAuth'
 dotenv.config();
 
@@ -58,6 +60,10 @@ app.use((req, res, next) => {
   // 🆕 NEW: Register Hyperliquid routes
   app.use('/api/hyperliquid', hyperliquidRoutes);
   console.log('[Hyperliquid] Routes registered');
+  
+  // 🆕 NEW: Register FX Swap routes
+  app.use('/api/fx-swap', fxSwapRoutes);
+  console.log('[FX Swap] Routes registered');
   // ==============================================
   
   

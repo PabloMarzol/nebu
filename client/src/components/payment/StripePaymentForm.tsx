@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CreditCard, AlertCircle, CheckCircle } from 'lucide-react';
 
 // Initialize Stripe with environment variable
-const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_LIVE_KEY;
 
 console.log('[Stripe] Using publishable key from env:', STRIPE_PUBLISHABLE_KEY ? 'Key loaded successfully' : 'Key not found');
 
@@ -42,8 +42,8 @@ const getStripePromise = async () => {
 };
 
 // Get publishable key from environment or use working fallback
-const publishableKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY?.startsWith('pk_') 
-  ? import.meta.env.VITE_STRIPE_PUBLIC_KEY 
+const publishableKey = import.meta.env.VITE_STRIPE_LIVE_KEY?.startsWith('pk_') 
+  ? import.meta.env.VITE_STRIPE_LIVE_KEY 
   : 'pk_test_51RgpjICv8i69yuqzH9YNbzAWZWoStFRRb69Gw9DOT8KHrcOj7tj2DqQOJAhLA2jxvcLGVP1EeCCZm6Oycw0PIR9Z00xdRsazWo';
 
 console.log('[Stripe] Using publishable key:', publishableKey?.substring(0, 20) + '...');

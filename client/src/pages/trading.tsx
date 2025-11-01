@@ -14,7 +14,7 @@ import PersonalizedLearning from "@/components/trading/personalized-learning";
 import AIPortfolioBalancer from "@/components/trading/ai-portfolio-balancer";
 import SocialTradingCommunity from "@/components/trading/social-trading-community";
 import VoiceTradingCommands from "@/components/trading/voice-trading-commands";
-import PersonalizedDashboardBuilder from "@/components/trading/personalized-dashboard-builder";
+import RecoveryDashboard from "@/components/RecoveryDashboard";
 import CryptoMemeGenerator from "@/components/trading/crypto-meme-generator";
 import AccessibilityMode from "@/components/trading/accessibility-mode";
 import MarketMoodTranslator from "@/components/trading/market-mood-translator";
@@ -106,19 +106,11 @@ export default function Trading() {
 
         {/* Comprehensive Trading Platform */}
         <Tabs defaultValue="trading" className="w-full">
-          <TabsList className="grid w-full grid-cols-6 lg:grid-cols-12 glass text-xs">
+          <TabsList className="grid w-full grid-cols-4 glass text-sm">
             <TabsTrigger value="trading">Trading</TabsTrigger>
             <TabsTrigger value="swap">Swap</TabsTrigger>
             <TabsTrigger value="portfolio">AI Portfolio</TabsTrigger>
-            <TabsTrigger value="social">Social</TabsTrigger>
-            <TabsTrigger value="learning">Learning</TabsTrigger>
-            <TabsTrigger value="nft">NFT Market</TabsTrigger>
-            <TabsTrigger value="voice">Voice</TabsTrigger>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="tools">Tools</TabsTrigger>
-            <TabsTrigger value="mood">Mood</TabsTrigger>
-            <TabsTrigger value="insights">Insights</TabsTrigger>
-            <TabsTrigger value="p2p">P2P</TabsTrigger>
           </TabsList>
 
           <TabsContent value="trading" className="space-y-6">
@@ -426,7 +418,50 @@ export default function Trading() {
           </TabsContent>
 
           <TabsContent value="dashboard" className="space-y-6">
-            <PersonalizedDashboardBuilder />
+            <ProtectedTradingWrapper feature="trading">
+              {/* 🆕 NEW: Integrated Recovery Dashboard with Wallet & Recent Swaps */}
+              <div className="space-y-6">
+                {/* Dashboard Header */}
+                <Card className="glass">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-2xl font-bold text-white mb-2">Trading Dashboard</h2>
+                        <p className="text-gray-400">Wallet balance, recent swaps, and recovery status</p>
+                      </div>
+                      <Badge variant="outline" className="bg-blue-500/10 border-blue-500/30">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+                        Live Data
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Recovery Status - Shows if any payments need recovery */}
+                <RecoveryDashboard />
+
+                {/* Portfolio Overview - Existing component */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <PortfolioOverview />
+                  <PortfolioBalanceDisplay />
+                </div>
+
+                {/* Recent Trading Activity */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <RecentTrades symbol="BTC/USDT" />
+                  <div className="space-y-4">
+                    <PortfolioQuickActions />
+                    <SimpleAIChat />
+                  </div>
+                </div>
+
+                {/* Market Data & Status */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <MarketDataStatus />
+                  <BlockchainWalletTracker />
+                </div>
+              </div>
+            </ProtectedTradingWrapper>
           </TabsContent>
 
           <TabsContent value="api" className="space-y-6">

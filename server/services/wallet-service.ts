@@ -423,51 +423,7 @@ export class WalletService {
     return txHash;
   }
 
-  // Generate deterministic address for user deposits
-  async generateDepositAddress(userId: string, currency: string, network: string = 'mainnet'): Promise<WalletAddress> {
-    // Simple deterministic address generation (replace with actual HD wallet in production)
-    const seed = `${userId}-${currency}-${network}`;
-    const hash = crypto.createHash('sha256').update(seed).digest('hex');
-    
-    let address: string;
-    switch (currency.toLowerCase()) {
-      case 'btc':
-        address = `bc1q${hash.substring(0, 32)}`;
-        break;
-      case 'eth':
-      case 'usdt':
-      case 'usdc':
-        address = `0x${hash.substring(0, 40)}`;
-        break;
-      case 'sol':
-        address = `${hash.substring(0, 32)}`;
-        break;
-      default:
-        address = `0x${hash.substring(0, 40)}`;
-    }
-
-    // Store address in database
-    await db.insert(wallets).values({
-      userId,
-      currency,
-      network,
-      address,
-      balance: "0",
-      availableBalance: "0",
-      frozenBalance: "0",
-      isActive: true
-    }).onConflictDoUpdate({
-      target: [wallets.userId, wallets.currency, wallets.network],
-      set: { address, isActive: true }
-    });
-
-    return {
-      address,
-      currency,
-      network,
-      isActive: true
-    };
-  }
+  
 
   // Add address to whitelist (VASP compliance - minimal KYC required)
   async whitelistAddress(userId: string, address: string, currency: string): Promise<boolean> {

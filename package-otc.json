@@ -4,12 +4,12 @@
   "description": "Professional OTC cryptocurrency trading platform",
   "main": "server/otc-index.ts",
   "scripts": {
-    "dev-otc": "NODE_ENV=development PORT=5001 tsx server/otc-index.ts",
+    "dev-otc": "NODE_ENV=development PORT=5000 tsx server/otc-index.ts",
     "build-otc": "npm run build:client-otc && npm run build:server-otc",
     "build:client-otc": "vite build --config vite-otc.config.ts",
     "build:server-otc": "esbuild server/otc-index.ts --bundle --platform=node --target=node18 --outfile=dist-otc/index.js --external:@neondatabase/serverless --external:ws",
-    "start-otc": "NODE_ENV=production PORT=5001 node dist-otc/index.js",
-    "preview-otc": "vite preview --port 5001",
+    "start-otc": "NODE_ENV=production PORT=5000 node dist-otc/index.js",
+    "preview-otc": "vite preview --port 5000",
     "db:push-otc": "drizzle-kit push --config=drizzle-otc.config.ts",
     "db:migrate-otc": "drizzle-kit migrate --config=drizzle-otc.config.ts",
     "db:studio-otc": "drizzle-kit studio --config=drizzle-otc.config.ts"

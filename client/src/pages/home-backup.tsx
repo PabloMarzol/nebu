@@ -1344,7 +1344,7 @@ export default function Home() {
                     Portfolio
                   </Button>
                 </Link>
-                <a href={`${window.location.protocol}//${window.location.hostname}:5001`} target="_blank" rel="noopener noreferrer">
+                <a href={`${window.location.protocol}//${window.location.hostname}:5000`} target="_blank" rel="noopener noreferrer">
                   <Button 
                     size="sm" 
                     variant="outline"
