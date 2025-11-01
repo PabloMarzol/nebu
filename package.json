@@ -11,8 +11,8 @@
     "db:push": "drizzle-kit push",
     "prepare": "husky install",
     "migrate": "node db_migration.js",
-    "deploy": "node scripts/deploy.js",
-    "deploy:prod": "cross-env NODE_ENV=production node scripts/deploy.js",
+    "deploy": "node scripts/deploy-minimal.js",
+    "deploy:prod": "cross-env NODE_ENV=production node scripts/deploy-minimal.js",
     "build:prod": "cross-env NODE_ENV=production npm run build",
     "health": "curl -s http://localhost:5000/api/health | jq .",
     "test:api": "node test-complete-solution.js"
