@@ -1,5 +1,11 @@
 node_modules
 dist
+cipher
+cipher-mcp-server
+context_bank
+context_charts
+context_fx_swaps
+
 .DS_Store
 server/public
 vite.config.ts.*
