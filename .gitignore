@@ -5,6 +5,10 @@ cipher-mcp-server
 context_bank
 context_charts
 context_fx_swaps
+.clinerules
+.github
+.husky
+.vscode
 
 .DS_Store
 server/public
