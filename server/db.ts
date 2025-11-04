@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
+import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -44,15 +45,18 @@ const getDatabaseConfig = () => {
     console.log('[Database] Max connections:', config.max);
     
     return config;
-  } catch (error) {
-    console.error('[Database] ❌ Error parsing DATABASE_URL:', error.message);
-    throw new Error('Invalid DATABASE_URL format');
-  }
+    } catch (error: any) {
+      console.error('[Database] ❌ Error parsing DATABASE_URL:', error.message);
+      throw new Error('Invalid DATABASE_URL format');
+    }
 };
 
 // Initialize database connection
-let pool;
-let db;
+let pool: Pool | null = null;
+let db: NodePgDatabase<typeof schema> | null = null;
+// let pool: Pool | null = null;
+// let db: NodePgDatabase<typeof schema> | null = null;
+
 
 try {
   const dbConfig = getDatabaseConfig();
@@ -61,18 +65,22 @@ try {
     console.log('[Database] Creating connection pool...');
     pool = new Pool(dbConfig);
     
-    // Add connection event handlers
-    pool.on('connect', () => {
-      console.log('[Database] ✅ New client connected');
-    });
-    
-    pool.on('error', (err) => {
-      console.error('[Database] ❌ Unexpected error on idle client', err);
-    });
-    
-    pool.on('remove', () => {
-      console.log('[Database] Client removed');
-    });
+    // Add connection event handlers (only if pool is a real Pool instance)
+    if (pool instanceof Pool) {
+      pool.on('connect', () => {
+        console.log('[Database] ✅ New client connected');
+      });
+      
+      pool.on('error', (err) => {
+        console.error('[Database] ❌ Unexpected error on idle client', err);
+      });
+      
+      pool.on('remove', () => {
+        console.log('[Database] Client removed');
+      });
+    } else {
+      console.log('[Database] ⚠️  Using mock pool, skipping event handlers');
+    }
 
     db = drizzle({ client: pool, schema });
     console.log('[Database] ✅ Database connection established successfully');
@@ -85,18 +93,39 @@ try {
       end: async () => {},
     };
     
+    // Create mock database with proper interface
     db = {
-      select: () => ({ from: () => ({ where: () => ({ execute: async () => [] }) }) }),
-      insert: () => ({ values: () => ({ execute: async () => ({}) }) }),
-      update: () => ({ set: () => ({ where: () => ({ execute: async () => ({}) }) }) }),
-      delete: () => ({ where: () => ({ execute: async () => ({}) }) }),
-    };
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            execute: async () => []
+          })
+        })
+      }),
+      insert: () => ({
+        values: () => ({
+          execute: async () => ({})
+        })
+      }),
+      update: () => ({
+        set: () => ({
+          where: () => ({
+            execute: async () => ({})
+          })
+        })
+      }),
+      delete: () => ({
+        where: () => ({
+          execute: async () => ({})
+        })
+      }),
+    } as any; // Cast to any to avoid complex typing for mock
   }
   
-} catch (error) {
+} catch (error: any) {
   console.error('[Database] ❌ Failed to initialize database:', error.message);
   
-  // In production, we should fail fast
+ // In production, we should fail fast
   if (process.env.NODE_ENV === 'production') {
     console.error('[Database] Cannot start without database connection in production');
     process.exit(1);

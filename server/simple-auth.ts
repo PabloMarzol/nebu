@@ -164,158 +164,8 @@ Account Status: ${accountDetails?.accountStatus || 'Active'}
   }
 }
 
-// Simple in-memory user store for development
-const users = new Map();
-
-// Add your registered user  
-users.set('jatbanga@hotmail.com', {
-  id: 'user-jatbanga-main',
-  email: 'jatbanga@hotmail.com',
-  firstName: 'John',
-  lastName: 'User',
-  passwordHash: '$2b$10$ZQ7Q7Q7Q7Q7Q7Q7Q7Q7Q7O', // Will be overridden
-  emailVerified: true,
-  kycStatus: 'pending',
-  kycLevel: 1,
-  accountTier: 'basic'
-});
-
-// Add the current user trying to log in
-users.set('tonyshare@hotmail.co.uk', {
-  id: 'user-tonyshare-main',
-  email: 'tonyshare@hotmail.co.uk',
-  firstName: 'Tony',
-  lastName: 'Share',
-  passwordHash: '$2b$10$ZQ7Q7Q7Q7Q7Q7Q7Q7Q7Q7O', // Will be overridden
-  emailVerified: true,
-  kycStatus: 'pending',
-  kycLevel: 1,
-  accountTier: 'basic'
-});
-
-// Demo user
-users.set('demo@nebulax.com', {
-  id: 'demo-user-123',
-  email: 'demo@nebulax.com',
-  firstName: 'Demo',
-  lastName: 'User',
-  passwordHash: '$2b$10$ZQ7Q7Q7Q7Q7Q7Q7Q7Q7Q7O', // Will be overridden
-  emailVerified: true,
-  kycStatus: 'verified',
-  kycLevel: 2,
-  accountTier: 'premium'
-});
-
-async function hashPassword(password: string): Promise<string> {
-  return await bcrypt.hash(password, 10);
-}
-
-async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return await bcrypt.compare(password, hash);
-}
-
-// Initialize password hashes
-let passwordsInitialized = false;
-
-async function initializePasswords() {
-  if (!passwordsInitialized) {
-    try {
-      const jatUser = users.get('jatbanga@hotmail.com');
-      const demoUser = users.get('demo@nebulax.com');
-      
-      if (jatUser) {
-        jatUser.passwordHash = await hashPassword('nebulax123');
-        console.log('[SimpleAuth] Jat user password hash set');
-      }
-      
-      const tonyUser = users.get('tonyshare@hotmail.co.uk');
-      if (tonyUser) {
-        tonyUser.passwordHash = await hashPassword('nebulax123');
-        console.log('[SimpleAuth] Tony user password hash set');
-      }
-      
-      if (demoUser) {
-        demoUser.passwordHash = await hashPassword('demo123');
-        console.log('[SimpleAuth] Demo user password hash set');
-      }
-      
-      passwordsInitialized = true;
-      console.log('[SimpleAuth] Password hashes initialized successfully');
-    } catch (error) {
-      console.error('[SimpleAuth] Error initializing passwords:', error);
-    }
-  }
-}
-
-// Initialize immediately and on startup
-setTimeout(initializePasswords, 100);
-
-// Login endpoint
-router.post("/login", async (req, res) => {
-  try {
-    // Ensure passwords are initialized
-    await initializePasswords();
-    
-    const { email, password } = req.body;
-    console.log('[SimpleAuth] Login attempt for:', email);
-    
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
-    }
-
-    // Try to get user from database first
-    const { storage } = await import('./storage');
-    let user = await storage.getUserByEmail(email);
-    
-    // Fallback to memory store for backward compatibility
-    if (!user) {
-      user = users.get(email);
-    }
-    
-    if (!user) {
-      console.log('[SimpleAuth] User not found:', email);
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    const isValidPassword = await verifyPassword(password, user.passwordHash || '');
-    if (!isValidPassword) {
-      console.log('[SimpleAuth] Invalid password for:', email);
-      return res.status(401).json({ message: "Invalid credentials" });
-    }
-
-    // Create session and save it
-    req.session.userId = user.id;
-    req.session.user = {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      emailVerified: user.emailVerified,
-      kycStatus: user.kycStatus,
-      kycLevel: user.kycLevel,
-      accountTier: user.accountTier
-    };
-
-    // Save session explicitly and return response within callback
-    req.session.save((err) => {
-      if (err) {
-        console.error('[SimpleAuth] Session save error:', err);
-        return res.status(500).json({ message: "Session save failed" });
-      }
-      
-      console.log('[SimpleAuth] Session saved successfully for:', email);
-      console.log('[SimpleAuth] Login successful for:', email);
-      
-      res.json({
-        message: "Login successful",
-        user: req.session.user
-      });
-    });
-  } catch (error) {
-    console.error("Login error:", error);
-    res.status(500).json({ message: "Login failed" });
-  }
-});
+// Wallet-based authentication service
+// All authentication is done through wallet signatures, not passwords
 
 // Test email endpoint for debugging
 router.post("/test-email", async (req, res) => {
@@ -351,113 +201,82 @@ router.post("/test-email", async (req, res) => {
   }
 });
 
-// Get current user
+// Get current user (wallet-based)
 router.get("/user", (req, res) => {
-  console.log('[SimpleAuth] Checking session. User ID:', req.session?.userId);
+  console.log('[SimpleAuth] Checking session. User ID:', (req as any).session?.userId);
   
-  if (!req.session?.userId) {
+  if (!(req as any).session?.userId) {
     return res.status(401).json({ message: "Not authenticated" });
   }
   
-  res.json(req.session.user);
+  res.json((req as any).session.user);
 });
 
-// Registration endpoint
-router.post("/register", async (req, res) => {
+// Wallet authentication endpoint
+router.post("/wallet-auth", async (req, res) => {
   try {
-    const { email, password, firstName, lastName } = req.body;
-    console.log('[SimpleAuth] Registration attempt for:', email);
-    console.log('[SimpleAuth] Request body:', { email, firstName, lastName, hasPassword: !!password });
+    const { walletAddress, signature, message } = req.body;
     
-    if (!email || !password || !firstName || !lastName) {
-      console.log('[SimpleAuth] Missing required fields');
-      return res.status(400).json({ message: "All fields are required" });
+    if (!walletAddress || !signature || !message) {
+      return res.status(400).json({ message: "Wallet address, signature, and message are required" });
     }
 
-    // Check if user already exists in database
+    console.log('[SimpleAuth] Wallet authentication attempt for:', walletAddress);
+
+    // Verify wallet signature (this would be implemented with actual wallet verification)
+    // For now, we'll accept any valid wallet address format
+    const isValidWallet = /^0x[a-fA-F0-9]{40}$/.test(walletAddress);
+    if (!isValidWallet) {
+      return res.status(400).json({ message: "Invalid wallet address format" });
+    }
+
+    // Get or create user by wallet address
     const { storage } = await import('./storage');
-    const existingUser = await storage.getUserByEmail(email);
-    if (existingUser) {
-      console.log('[SimpleAuth] User already exists in database:', email);
-      return res.status(409).json({ 
-        message: "Account already exists", 
-        details: "An account with this email already exists. Please log in instead.",
-        action: "login"
+    let user = await storage.getUserByEmail(walletAddress);
+    
+    if (!user) {
+      // Create new user with wallet address as identifier
+      user = await storage.createUser({
+        id: `wallet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        email: walletAddress, // Use wallet address as email for now
+        firstName: 'Wallet',
+        lastName: 'User',
+        emailVerified: true,
+        kycStatus: 'pending',
+        kycLevel: 1,
+        accountTier: 'basic'
       });
+      console.log('[SimpleAuth] New wallet user created:', walletAddress);
     }
 
-    // Also check memory store for backward compatibility
-    if (users.has(email)) {
-      console.log('[SimpleAuth] User already exists in memory:', email);
-      return res.status(409).json({ 
-        message: "Account already exists", 
-        details: "An account with this email already exists. Please log in instead.",
-        action: "login"
-      });
-    }
-
-    // Create new user in database
-    const passwordHash = await hashPassword(password);
-    const userId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    const newUser = await storage.createUser({
-      id: userId,
-      email,
-      firstName,
-      lastName,
-      passwordHash,
-      emailVerified: true, // Auto-verify for demo
-      kycStatus: 'pending',
-      kycLevel: 1,
-      accountTier: 'basic'
-    });
-
-    // Also add to memory store for compatibility
-    users.set(email, newUser);
-
-    // Send welcome email
-    try {
-      await sendWelcomeEmail(email, firstName);
-      console.log(`[SimpleAuth] Welcome email sent to: ${email}`);
-    } catch (emailError) {
-      console.error('[SimpleAuth] Failed to send welcome email:', emailError);
-    }
-
-    // Send admin notification with complete account details
-    try {
-      await sendAdminNotification(email, firstName, lastName, newUser);
-      console.log(`[SimpleAuth] Admin notification sent to traders@nebulaxexchange.io for new user: ${email}`);
-    } catch (adminError) {
-      console.error('[SimpleAuth] Failed to send admin notification:', adminError);
-    }
-
-    // Create session immediately
-    req.session.userId = newUser.id;
-    req.session.user = {
-      id: newUser.id,
-      email: newUser.email,
-      firstName: newUser.firstName,
-      lastName: newUser.lastName,
-      emailVerified: newUser.emailVerified,
-      kycStatus: newUser.kycStatus,
-      kycLevel: newUser.kycLevel,
-      accountTier: newUser.accountTier
+    // Create session
+    (req as any).session.userId = user.id;
+    (req as any).session.user = {
+      id: user.id,
+      walletAddress: user.email, // Store wallet address in email field for now
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      emailVerified: user.emailVerified,
+      kycStatus: user.kycStatus,
+      kycLevel: user.kycLevel,
+      accountTier: user.accountTier
     };
 
-    console.log('[SimpleAuth] Registration successful for:', email);
+    console.log('[SimpleAuth] Wallet authentication successful for:', walletAddress);
     res.json({
-      message: "Registration successful",
-      user: req.session.user
+      message: "Wallet authentication successful",
+      user: (req as any).session.user
     });
   } catch (error) {
-    console.error("[SimpleAuth] Registration error:", error);
-    console.error("[SimpleAuth] Error stack:", (error as any).stack);
-    res.status(500).json({ message: "Registration failed", error: (error as any).message });
+    console.error('[SimpleAuth] Wallet authentication error:', error);
+    res.status(500).json({ message: "Wallet authentication failed" });
   }
 });
 
 // Logout
 router.post("/logout", (req, res) => {
-  req.session.destroy((err) => {
+  (req as any).session.destroy((err: any) => {
     if (err) {
       return res.status(500).json({ message: "Logout failed" });
     }

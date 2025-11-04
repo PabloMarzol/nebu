@@ -1,5 +1,6 @@
 import { storage } from "../storage";
 import { type MarketData } from "@shared/schema";
+import { hyperliquidMarketDataService } from "./hyperliquid-market-data";
 
 interface ExternalMarketData {
   symbol: string;
@@ -11,40 +12,9 @@ interface ExternalMarketData {
   marketCap?: number;
 }
 
-interface ALT5TickerData {
-  instrument: string;
-  start: string;
-  end: string;
-  low: number;
-  high: number;
-  volume: number;
-  open: number;
-  close: number;
-}
-
 export class MarketDataService {
   private updateInterval: NodeJS.Timeout | null = null;
   private isUpdating = false;
-  private readonly ALT5_API_URL = 'https://trade.alt5pro.com/marketdata/api/v2/marketdata/ticker';
-
-  // Map ALT5 instruments to our format
-  private readonly INSTRUMENT_MAPPING: Record<string, string> = {
-    'btc_usdt': 'BTC/USDT',
-    'eth_usdt': 'ETH/USDT',
-    'sol_usd': 'SOL/USDT',
-    'ada_cad': 'ADA/USDT',
-    'dot_usdt': 'DOT/USDT',
-    'matic_usdt': 'MATIC/USDT',
-    'avax_usdt': 'AVAX/USDT',
-    'link_usdt': 'LINK/USDT',
-    'uni_usd': 'UNI/USDT',
-    'atom_usdt': 'ATOM/USDT',
-    'bnb_usdt': 'BNB/USDT',
-    'xrp_usdt': 'XRP/USDT',
-    'ltc_usdt': 'LTC/USDT',
-    'bch_usdc': 'BCH/USDT',
-    'etc_usdt': 'ETC/USDT'
-  };
 
   // Supported trading pairs
   private readonly SUPPORTED_PAIRS = [
@@ -80,8 +50,8 @@ export class MarketDataService {
     this.isUpdating = true;
 
     try {
-      console.log('[MarketData] Fetching real prices from ALT5...');
-      const marketData = await this.fetchMarketDataFromALT5();
+      console.log('[MarketData] Fetching real prices from Hyperliquid...');
+      const marketData = await this.fetchMarketDataFromHyperliquid();
 
       for (const data of marketData) {
         await storage.updateMarketData(data.symbol, {
@@ -94,117 +64,55 @@ export class MarketDataService {
         });
       }
 
-      console.log(`[MarketData] Updated ${marketData.length} pairs with real ALT5 prices`);
+      console.log(`[MarketData] Updated ${marketData.length} pairs with real Hyperliquid prices`);
     } catch (error) {
-      console.error("[MarketData] Failed to fetch from ALT5, using fallback:", error);
-      // Fallback to simulated data if ALT5 fails
-      await this.updateWithSimulatedData();
+      console.error("[MarketData] Failed to fetch from Hyperliquid:", error);
+      // Log error but don't use fallback - only use real Hyperliquid data
+      console.warn("[MarketData] Market data update failed - will retry on next cycle");
     } finally {
       this.isUpdating = false;
     }
   }
 
-  private async fetchMarketDataFromALT5(): Promise<ExternalMarketData[]> {
+  private async fetchMarketDataFromHyperliquid(): Promise<ExternalMarketData[]> {
     try {
-      const response = await fetch(this.ALT5_API_URL, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`ALT5 API returned ${response.status}: ${response.statusText}`);
-      }
-
-      const alt5Data: ALT5TickerData[] = await response.json();
-      console.log(`[MarketData] Received ${alt5Data.length} instruments from ALT5`);
+      const hyperliquidData = await hyperliquidMarketDataService.getMarketData();
+      console.log(`[MarketData] Received ${hyperliquidData.length} instruments from Hyperliquid`);
 
       const marketData: ExternalMarketData[] = [];
 
-      for (const ticker of alt5Data) {
-        const symbol = this.INSTRUMENT_MAPPING[ticker.instrument];
-        
-        if (!symbol || ticker.close === 0) {
-          continue; // Skip unmapped instruments or instruments with no data
+      for (const ticker of hyperliquidData) {
+        if (!ticker.symbol || !ticker.price) {
+          continue; // Skip invalid data
         }
 
-        const changePercent = ticker.open > 0 
-          ? ((ticker.close - ticker.open) / ticker.open) * 100 
-          : 0;
+        const price = parseFloat(ticker.price);
+        const change24h = parseFloat(ticker.change24h) || 0;
+        const volume24h = parseFloat(ticker.volume24h) || 0;
+        const high24h = parseFloat(ticker.high24h) || price;
+        const low24h = parseFloat(ticker.low24h) || price;
 
         marketData.push({
-          symbol,
-          price: ticker.close,
-          change24h: changePercent,
-          volume24h: ticker.volume,
-          high24h: ticker.high > 0 ? ticker.high : ticker.close,
-          low24h: ticker.low > 0 ? ticker.low : ticker.close,
-          marketCap: undefined // ALT5 doesn't provide market cap
+          symbol: ticker.symbol,
+          price: price,
+          change24h: change24h,
+          volume24h: volume24h,
+          high24h: high24h,
+          low24h: low24h,
+          marketCap: parseFloat(ticker.marketCap) || undefined
         });
       }
 
-      // Fill in missing pairs with fallback data
-      const foundSymbols = marketData.map(d => d.symbol);
-      const missingSymbols = this.SUPPORTED_PAIRS.filter(symbol => !foundSymbols.includes(symbol));
-      
-      if (missingSymbols.length > 0) {
-        console.log(`[MarketData] Adding fallback data for missing symbols: ${missingSymbols.join(', ')}`);
-        const fallbackData = this.generateFallbackData(missingSymbols);
-        marketData.push(...fallbackData);
+      // Only use Hyperliquid data - no fallback generation
+      if (marketData.length === 0) {
+        console.warn('[MarketData] No valid data received from Hyperliquid');
+        throw new Error('No market data available from Hyperliquid');
       }
 
       return marketData;
     } catch (error) {
-      console.error('[MarketData] Error fetching from ALT5:', error);
+      console.error('[MarketData] Error fetching from Hyperliquid:', error);
       throw error;
-    }
-  }
-
-  private generateFallbackData(symbols: string[]): ExternalMarketData[] {
-    const baseData = {
-      "BTC/USDT": { price: 67834.50, marketCap: 1330000000000 },
-      "ETH/USDT": { price: 3456.78, marketCap: 415000000000 },
-      "SOL/USDT": { price: 198.42, marketCap: 94000000000 },
-      "ADA/USDT": { price: 0.4523, marketCap: 16000000000 },
-      "DOT/USDT": { price: 7.89, marketCap: 10500000000 },
-      "MATIC/USDT": { price: 0.8945, marketCap: 8700000000 },
-      "AVAX/USDT": { price: 35.67, marketCap: 14200000000 },
-      "LINK/USDT": { price: 14.23, marketCap: 8400000000 },
-      "UNI/USDT": { price: 6.78, marketCap: 5100000000 },
-      "ATOM/USDT": { price: 9.45, marketCap: 3700000000 }
-    };
-
-    return symbols.map(symbol => {
-      const base = baseData[symbol] || { price: Math.random() * 100, marketCap: Math.random() * 10000000000 };     
-      const volatility = 0.02; // 2% max change
-      const changePercent = (Math.random() - 0.5) * 2 * volatility;
-
-      return {
-        symbol,
-        price: base.price * (1 + changePercent),
-        change24h: changePercent * 100,
-        volume24h: Math.random() * 1000000000,
-        high24h: base.price * (1 + Math.abs(changePercent) * 1.2),
-        low24h: base.price * (1 - Math.abs(changePercent) * 1.2),
-        marketCap: base.marketCap
-      };
-    });
-  }
-
-  private async updateWithSimulatedData() {
-    const simulatedData = this.generateFallbackData(this.SUPPORTED_PAIRS);
-
-    for (const data of simulatedData) {
-      await storage.updateMarketData(data.symbol, {
-        price: data.price.toString(),
-        change24h: data.change24h.toString(),
-        volume24h: data.volume24h.toString(),
-        marketCap: data.marketCap?.toString(),
-        high24h: data.high24h.toString(),
-        low24h: data.low24h.toString()
-      });
     }
   }
 

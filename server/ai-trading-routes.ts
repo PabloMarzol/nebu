@@ -3,6 +3,8 @@ import { z } from "zod";
 import { db } from "./db";
 import { verifyWalletAuth } from "./middleware/walletAuth";
 import { aiTradingService } from "./services/AITradingService";
+import { hyperliquidMarketDataService } from "./services/hyperliquid-market-data";
+import { marketDataService } from "./services/market-data";
 import {
   aiTradingSignals,
   aiMarketAnalysis,
@@ -87,14 +89,14 @@ export function registerAITradingRoutes(app: Express) {
       
       if (!process.env.OPENAI_API_KEY) {
         return res.status(503).json({
-          response: "AI services are currently unavailable. The OpenAI API key is not configured.",
+          response: "AI services are currently unavailable. The Groq API key is not configured.",
           type: "general"
         });
       }
 
-      // Import OpenAI
-      const OpenAI = (await import('openai')).default;
-      const openai = new OpenAI({
+      // Import Groq
+      const Groq = (await import('groq-sdk')).default;
+      const groq = new Groq({
         apiKey: process.env.OPENAI_API_KEY
       });
 
@@ -139,8 +141,8 @@ Current context: You're integrated into a live trading platform with real market
         content: message
       });
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+      const completion = await groq.chat.completions.create({
+        model: "groq/compound", // Using Groq's Llama model for faster inference
         messages: messages as any,
         max_tokens: 500,
         temperature: 0.7,
@@ -197,8 +199,11 @@ Current context: You're integrated into a live trading platform with real market
 
       const { symbol, marketData } = validation.data;
 
-      // Generate AI trading signal
-      const signal = await aiTradingService.generateTradingSignal(symbol, marketData);
+      // Enhance market data with real-time prices if not provided or outdated
+      const enhancedMarketData = await enhanceMarketDataWithRealTimePrices(symbol, marketData);
+
+      // Generate AI trading signal with enhanced real-time data
+      const signal = await aiTradingService.generateTradingSignal(symbol, enhancedMarketData);
 
       // Store in database
       await db.insert(aiTradingSignals).values({
@@ -728,6 +733,53 @@ Current context: You're integrated into a live trading platform with real market
       res.status(500).json({ message: 'Failed to execute command' });
     }
   });
+
+  // Helper function to enhance market data with real-time prices
+  async function enhanceMarketDataWithRealTimePrices(symbol: string, providedMarketData: any): Promise<any> {
+    try {
+      // Get current real-time price data
+      const currentMarketData = await marketDataService.getMarketDataBySymbol(symbol);
+      const realTimePrice = await hyperliquidMarketDataService.getCurrentPrice(symbol);
+      
+      if (!currentMarketData && !realTimePrice) {
+        console.warn(`[AI Trading] No real-time data available for ${symbol}, using provided data`);
+        return providedMarketData;
+      }
+
+      // Merge provided data with real-time data, prioritizing real-time prices
+      const enhancedData = {
+        ...providedMarketData,
+        price: realTimePrice ? parseFloat(realTimePrice) : parseFloat(currentMarketData?.price || providedMarketData.price),
+        change24h: currentMarketData?.change24h ? parseFloat(currentMarketData.change24h) : providedMarketData.change24h,
+        volume: currentMarketData?.volume24h ? parseFloat(currentMarketData.volume24h) : providedMarketData.volume,
+        high24h: currentMarketData?.high24h ? parseFloat(currentMarketData.high24h) : providedMarketData.high24h,
+        low24h: currentMarketData?.low24h ? parseFloat(currentMarketData.low24h) : providedMarketData.low24h,
+        marketCap: currentMarketData?.marketCap ? parseFloat(currentMarketData.marketCap) : providedMarketData.marketCap,
+        // Keep technical indicators from provided data if available
+        rsi: providedMarketData.rsi,
+        macd: providedMarketData.macd,
+        ma20: providedMarketData.ma20,
+        ma50: providedMarketData.ma50,
+        support: providedMarketData.support,
+        resistance: providedMarketData.resistance,
+        // Add timestamp to show when data was enhanced
+        dataSource: 'real-time-enhanced',
+        enhancedAt: new Date().toISOString()
+      };
+
+      console.log(`[AI Trading] Enhanced market data for ${symbol}:`, {
+        originalPrice: providedMarketData.price,
+        realTimePrice: realTimePrice,
+        enhancedPrice: enhancedData.price
+      });
+
+      return enhancedData;
+    } catch (error) {
+      console.error(`[AI Trading] Error enhancing market data for ${symbol}:`, error);
+      // Fallback to provided data if enhancement fails
+      return providedMarketData;
+    }
+  }
 
   console.log('[AI Trading Routes] AI Trading routes registered successfully');
 }

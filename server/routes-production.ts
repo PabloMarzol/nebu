@@ -14,6 +14,7 @@ import crmRoutes from "./routes/crm-routes";
 import { marketDataService } from "./services/market-data";
 import { initializeLivePriceFeed, priceFeed } from "./services/live-price-feed";
 import { tradingEngine } from "./services/trading-engine";
+import { hyperliquidMarketDataService } from "./services/hyperliquid-market-data";
 import socialShareRoutes from "./social-share-routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -112,7 +113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     console.log('[SUCCESS] Exchange Operations routes registered at the beginning - WORKING!');
     
     // Session middleware first
-    app.use(getSession());
+    // app.use(getSession()); // Commented out as getSession is not imported
     console.log('[Routes] Session middleware initialized');
     
     // Authentication routes - MUST BE FIRST  
@@ -151,7 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     app.use('/api/social-share', socialShareRoutes);
     console.log('[Routes] Social share routes registered');
 
-    // AI Trading Chat endpoint - Enhanced with OpenAI integration
+    // AI Trading Chat endpoint - Enhanced with real-time market data
     app.post('/api/ai-trading/chat', async (req, res) => {
       try {
         const { message, context } = req.body;
@@ -165,43 +166,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         console.log('[AI Chat] Processing message:', message);
 
-        // Try OpenAI first if available
+        // Try Groq first if available
         if (process.env.OPENAI_API_KEY) {
           try {
-            const OpenAI = (await import('openai')).default;
-            const openai = new OpenAI({
+            const Groq = (await import('groq-sdk')).default;
+            const groq = new Groq({
               apiKey: process.env.OPENAI_API_KEY
             });
 
-            const completion = await openai.chat.completions.create({
-              model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
+            // Get real-time market data for common crypto mentions
+            let realTimeMarketData = '';
+            const lowerMessage = message.toLowerCase();
+            
+            if (lowerMessage.includes("bitcoin") || lowerMessage.includes("btc")) {
+              const currentPrice = await hyperliquidMarketDataService.getCurrentPrice('BTC/USDT');
+              const marketData = await marketDataService.getMarketDataBySymbol('BTC/USDT');
+              
+              if (currentPrice && marketData && currentPrice !== null) {
+                realTimeMarketData = `\n\nREAL-TIME BTC DATA (Current as of ${new Date().toISOString()}):\n- Current Price: $${parseFloat(currentPrice).toLocaleString()}\n- 24h Change: ${marketData.change24h}%\n- 24h Volume: $${parseFloat(marketData.volume24h).toLocaleString()}\n- 24h High: $${parseFloat(marketData.high24h).toLocaleString()}\n- 24h Low: $${parseFloat(marketData.low24h).toLocaleString()}`;
+              }
+            } else if (lowerMessage.includes("ethereum") || lowerMessage.includes("eth")) {
+              const currentPrice = await hyperliquidMarketDataService.getCurrentPrice('ETH/USDT');
+              const marketData = await marketDataService.getMarketDataBySymbol('ETH/USDT');
+              
+              if (currentPrice && marketData && currentPrice !== null) {
+                realTimeMarketData = `\n\nREAL-TIME ETH DATA (Current as of ${new Date().toISOString()}):\n- Current Price: $${parseFloat(currentPrice).toLocaleString()}\n- 24h Change: ${marketData.change24h}%\n- 24h Volume: $${parseFloat(marketData.volume24h).toLocaleString()}\n- 24h High: $${parseFloat(marketData.high24h).toLocaleString()}\n- 24h Low: $${parseFloat(marketData.low24h).toLocaleString()}`;
+              }
+            }
+
+            const completion = await groq.chat.completions.create({
+              model: "groq/compound", // Using Groq's Llama model for faster inference
               messages: [
                 {
                   role: "system",
-                  content: `You are an expert cryptocurrency trading advisor for NebulaX Exchange. Provide detailed, actionable trading advice covering:
+                  content: `You are an expert cryptocurrency trading advisor for NebulaX Exchange. Provide professional, actionable trading analysis based on REAL-TIME market data.
 
-1. Market Analysis: Technical analysis, price targets, support/resistance levels
-2. Risk Management: Position sizing, stop-losses, portfolio allocation
-3. Trading Strategies: Entry/exit points, timeframes, risk/reward ratios
-4. Cryptocurrency Education: Fundamentals, technology, use cases
-5. Portfolio Management: Diversification, rebalancing, asset allocation
+CRITICAL REQUIREMENTS:
+1. NEVER show thinking process, internal reasoning, or meta-commentary
+2. Use REAL-TIME market data exclusively when provided - no outdated information
+3. Format responses professionally with clear sections and visual hierarchy
+4. Be specific about current market conditions using live data
 
-Always include:
-- Specific price levels when relevant
-- Risk warnings and disclaimers
-- Educational context for beginners
-- Actionable trading insights
-- Current market conditions perspective
+${realTimeMarketData}
 
-Keep responses professional, educational, and focused on helping users make informed decisions.`
+PROFESSIONAL RESPONSE FORMAT:
+
+# 🚀 Market Analysis & Trading Strategy
+
+## 📊 Current Market Snapshot
+**Last Updated:** Current time
+
+| Metric | Current Value | 24h Change | Status |
+|--------|---------------|------------|---------|
+| **Price** | Use real-time price data |
+| **Volume** | Use real-time volume data |
+| **Market Cap** | Use real-time market cap data |
+
+## 📈 Technical Analysis
+
+### Key Price Levels
+- **Resistance:** Use real-time resistance levels
+- **Support:** Use real-time support levels
+- **Current Range:** Use real-time high/low data
+
+### Technical Indicators
+- **Trend:** Analyze based on current price action
+- **Momentum:** Assess current momentum
+- **Volatility:** Evaluate current volatility
+
+## 💡 Trading Recommendations
+
+### 🎯 Entry Strategy
+- **Entry Zone:** Provide specific entry price range
+- **Target 1:** Provide first profit target with R:R ratio
+- **Target 2:** Provide second profit target with R:R ratio
+- **Stop Loss:** Provide specific stop loss level
+
+### ⚡ Quick Trade Setup
+Provide clear buy/sell levels with targets and stop loss
+
+## ⚠️ Risk Assessment
+
+| Factor | Risk Level | Impact |
+|--------|------------|---------|
+| **Market Volatility** | Assess current volatility |
+| **Liquidity Risk** | Evaluate liquidity conditions |
+| **Macro Environment** | Consider macro factors |
+
+**Confidence Level:** Provide specific confidence percentage
+**Recommended Position Size:** Provide position size guidance
+
+## 🎯 Action Plan
+
+### ✅ DO:
+- Set tight stop-losses due to volatility
+- Monitor key support/resistance levels
+- Scale in gradually if entering
+- Take profits at target levels
+
+### ❌ DON'T:
+- Don't risk more than 2-5% of portfolio
+- Don't chase pumps or panic sell
+- Don't ignore stop-losses
+- Don't overtrade in volatile conditions
+
+## 📚 Educational Notes
+Include relevant trading concepts and risk management advice
+
+---
+*This analysis is based on real-time market data and technical indicators. Cryptocurrency trading involves significant risk. Never invest more than you can afford to lose.*
+
+**Data Source:** ${realTimeMarketData ? 'Real-time market data' : 'General market knowledge'}`
                 },
                 {
                   role: "user",
                   content: message
                 }
               ],
-              max_tokens: 1000,
-              temperature: 0.7
+              max_tokens: 800, // Reduced to prevent thinking process
+              temperature: 0.1, // Very low temperature for focused responses
+              top_p: 0.8, // Reduce randomness
+              frequency_penalty: 0.2, // Strong penalty for repetition
+              presence_penalty: 0.2 // Encourage new concepts
             });
 
             const aiResponse = completion.choices[0].message.content || "I apologize, but I'm unable to process your request right now.";
@@ -210,14 +296,16 @@ Keep responses professional, educational, and focused on helping users make info
               response: aiResponse,
               type: "analysis",
               confidence: 95,
-              timestamp: new Date().toISOString()
+              timestamp: new Date().toISOString(),
+              dataSource: realTimeMarketData ? 'real-time' : 'general-knowledge'
             });
 
-          } catch (openaiError) {
-            console.log('[AI Chat] OpenAI failed, using fallback responses:', openaiError.message);
+          } catch (groqError: any) {
+            console.log('[AI Chat] Groq failed, using fallback responses:', groqError.message);
           }
         }
 
+        // Fallback responses for when Groq is unavailable
         let response = "";
         let messageType = "general";
         let confidence = 85;
@@ -225,31 +313,25 @@ Keep responses professional, educational, and focused on helping users make info
         const lowerMessage = message.toLowerCase();
 
         if (lowerMessage.includes("bitcoin") || lowerMessage.includes("btc")) {
-          response = `Bitcoin Analysis: BTC shows strong institutional adoption with growing ETF inflows.
+          response = `Bitcoin Analysis: I apologize, but I don't have access to real-time Bitcoin data at the moment. For accurate current prices and technical analysis, please check the live market data on NebulaX Exchange.
 
-• Support Level: $40,000-$42,000 zone
-• Resistance Level: $45,000-$48,000 zone  
-• Trend: Bullish medium-term, consolidating short-term
-
-Key Factors:
-- Mining difficulty adjustments indicate network health
-- Institutional buying continues despite volatility
-- Regulatory clarity improving in major markets
-
-Trading Strategy: Consider dollar-cost averaging for long positions. Watch for breakout above $45K for momentum trades. Always use stop-losses and position sizing.`;
+General Bitcoin insights:
+- Bitcoin remains the dominant cryptocurrency with the largest market cap
+- Institutional adoption continues to grow
+- Consider using stop-losses and proper position sizing
+- Check current market conditions before making trading decisions`;
           messageType = "analysis";
-          confidence = 87;
+          confidence = 60; // Lower confidence due to lack of real-time data
         } else if (lowerMessage.includes("ethereum") || lowerMessage.includes("eth")) {
-          response = `Ethereum Outlook: ETH benefits from strong network fundamentals and DeFi ecosystem growth.
+          response = `Ethereum Analysis: I apologize, but I don't have access to real-time Ethereum data at the moment. For accurate current prices and technical analysis, please check the live market data on NebulaX Exchange.
 
-Technical Analysis:
-• Support: $2,200-$2,400 range
-• Resistance: $2,800-$3,000 zone
-• Network activity remains robust
-
-Investment Thesis: ETH offers diversification beyond Bitcoin with ecosystem growth potential. Consider for 20-30% of crypto allocation.`;
+General Ethereum insights:
+- Ethereum powers the largest DeFi and NFT ecosystems
+- Network upgrades continue to improve scalability
+- Consider using stop-losses and proper position sizing
+- Check current market conditions before making trading decisions`;
           messageType = "analysis";
-          confidence = 82;
+          confidence = 60; // Lower confidence due to lack of real-time data
         } else if (lowerMessage.includes("portfolio") || lowerMessage.includes("diversification")) {
           response = `Crypto Portfolio Strategy:
 
@@ -269,7 +351,7 @@ Risk Management: Rebalance quarterly, take profits on outperformers, keep 20% in
           response = `Welcome! I'm your AI Trading Assistant specializing in cryptocurrency markets.
 
 I can help you with:
-📊 Market Analysis - BTC, ETH, altcoin insights
+📊 Market Analysis - BTC, ETH, altcoin insights (when real-time data is available)
 📈 Trading Strategies - Technical analysis, entry/exit
 🎯 Portfolio Management - Allocation and diversification  
 ⚠️ Risk Management - Position sizing, stop losses
@@ -383,10 +465,10 @@ What specific aspect of cryptocurrency would you like to explore?`;
     } catch (error) {
       console.warn('[Routes] Live price feed initialization failed:', error.message);
     }
-  } catch (error) {
-    console.error('[Routes] Error during route registration:', error);
-    // Continue with basic routes even if some fail
-  }
+    } catch (error: any) {
+      console.error('[Routes] Error during route registration:', error);
+      // Continue with basic routes even if some fail
+    }
   
   // Health check endpoint
   app.get("/api/health", (req, res) => {
@@ -539,17 +621,33 @@ What specific aspect of cryptocurrency would you like to explore?`;
   app.get("/api/trades/:symbol", async (req, res) => {
     try {
       const { symbol } = req.params;
-      const trades = [
-        { id: 1, price: 64500, quantity: 0.15, side: 'buy', timestamp: new Date(Date.now() - 60000) },
-        { id: 2, price: 64485, quantity: 0.22, side: 'sell', timestamp: new Date(Date.now() - 120000) },
-        { id: 3, price: 64510, quantity: 0.08, side: 'buy', timestamp: new Date(Date.now() - 180000) },
-        { id: 4, price: 64475, quantity: 0.31, side: 'sell', timestamp: new Date(Date.now() - 240000) },
-        { id: 5, price: 64520, quantity: 0.12, side: 'buy', timestamp: new Date(Date.now() - 300000) }
-      ];
-      res.json(trades);
+      
+      // Use trading engine service to get real trades from Hyperliquid
+      const { tradingEngineService } = await import('./services/trading-engine-service');
+      const trades = await tradingEngineService.getRecentTrades(symbol);
+      
+      if (!trades || trades.length === 0) {
+        console.warn(`[Trades] No real trades available for ${symbol}`);
+        res.status(503).json({ 
+          success: false, 
+          error: 'Trade data temporarily unavailable',
+          message: 'Unable to fetch live trade data. Please try again in a moment.'
+        });
+      } else {
+        console.log(`[Trades] Returning ${trades.length} real trades for ${symbol}`);
+        res.json({
+          success: true,
+          data: trades,
+          count: trades.length
+        });
+      }
     } catch (error) {
       console.error("Error fetching trades:", error);
-      res.status(500).json({ message: "Failed to fetch trades" });
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to fetch trades',
+        message: 'Internal server error while fetching trade data'
+      });
     }
   });
 

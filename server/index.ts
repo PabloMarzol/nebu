@@ -10,6 +10,10 @@ import hyperliquidRoutes from './routes/hyperliquid';
 console.log('✅ Hyperliquid routes imported:', typeof hyperliquidRoutes);
 import fxSwapRoutes from './routes/fx_swap_routes';
 console.log('✅ FX Swap routes imported:', typeof fxSwapRoutes);
+import alt5CustodialRoutes from './routes/alt5-custodial-routes';
+console.log('✅ ALT5 Custodial routes imported:', typeof alt5CustodialRoutes);
+import { setupHyperliquidWebSocketCandleRoutes } from './routes/hyperliquid-ws-candles';
+console.log('✅ Hyperliquid WebSocket candle routes imported');
 import { verifyWalletAuth } from './middleware/walletAuth'
 dotenv.config();
 
@@ -60,6 +64,10 @@ app.use((req, res, next) => {
   // 🆕 NEW: Register Hyperliquid routes
   app.use('/api/hyperliquid', hyperliquidRoutes);
   console.log('[Hyperliquid] Routes registered');
+  
+  // 🆕 NEW: Register Hyperliquid WebSocket candle routes
+  setupHyperliquidWebSocketCandleRoutes(app);
+  console.log('[Hyperliquid WebSocket] Candle routes registered');
   
   // 🆕 NEW: Register FX Swap routes
   app.use('/api/fx-swap', fxSwapRoutes);

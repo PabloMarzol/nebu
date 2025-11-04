@@ -18,7 +18,6 @@ import { tradingEngine } from "./services/trading-engine";
 import { marketDataService } from "./services/market-data";
 import { initializeLivePriceFeed, priceFeed } from "./services/live-price-feed";
 import { BlockchainService } from "./services/blockchain-integrations";
-import { cryptoCompareService } from "./services/cryptocompare-service";
 import { coinbaseService } from "./services/coinbase-service";
 import { liveTradingAPI } from "./services/live-trading-api";
 import { kycService } from "./services/kyc-service";
@@ -77,6 +76,7 @@ import manualFxTriggerRoutes from "./routes/manual-fx-trigger";
 import fxFundingStatusRoutes from "./routes/fx-funding-status";
 import walletFundingRoutes from "./routes/wallet-funding";
 import alt5OnRampRoutes from "./routes/alt5-onramp-routes";
+import alt5CustodialRoutes from "./routes/alt5-custodial-routes";
 import webhookTestRoutes from "./routes/webhook-test";
 import dotenv from "dotenv"
 dotenv.config()
@@ -1124,47 +1124,47 @@ What specific aspect would you like me to dive deeper into?`;
   // API status endpoint
   app.get("/api/services/status", getAPIStatus);
 
-  // Market data endpoints
+  // Market data endpoints - Use Hyperliquid as primary source - NO MOCK DATA ALLOWED
   app.get('/api/markets', async (req, res) => {
-  try {
-    const markets = await marketDataService.getMarketData();
-    
-    // Return ALT5 market data in the format the frontend expects
-    if (markets && markets.length > 0) {
-      // Use real ALT5 data
-      const formattedData = markets.map(market => ({
-        symbol: market.symbol,
-        price: parseFloat(market.price),
-        change24h: parseFloat(market.change24h),
-        volume: parseFloat(market.volume24h),
-        high24h: parseFloat(market.high24h),
-        low24h: parseFloat(market.low24h)
-      }));
+    try {
+      const { hyperliquidMarketDataService } = await import('./services/hyperliquid-market-data');
+      const markets = await hyperliquidMarketDataService.getMarketData();
       
-      console.log(`[Markets] Returning ${formattedData.length} markets with ALT5 prices`);
-      res.json({
-        success: true,
-        data: formattedData
-      });
-    } else {
-      // Fallback to mock data if ALT5 fails
-      console.warn('[Markets] No ALT5 data available, using fallback');
-      const fallbackData = [
-        { symbol: 'BTC/USDT', price: 64500, change24h: 2.5, volume: 1000000, high24h: 65000, low24h: 64000 },
-        { symbol: 'ETH/USDT', price: 2500, change24h: 1.8, volume: 800000, high24h: 2550, low24h: 2450 },
-        { symbol: 'SOL/USDT', price: 100, change24h: -1.2, volume: 500000, high24h: 102, low24h: 98 }
-      ];
-      
-      res.json({
-        success: true,
-        data: fallbackData
+      // Return Hyperliquid market data in the format the frontend expects
+      if (markets && markets.length > 0) {
+        // Use real Hyperliquid data
+        const formattedData = markets.map(market => ({
+          symbol: market.symbol,
+          price: parseFloat(market.price),
+          change24h: parseFloat(market.change24h),
+          volume: parseFloat(market.volume24h),
+          high24h: parseFloat(market.high24h),
+          low24h: parseFloat(market.low24h)
+        }));
+        
+        console.log(`[Markets] Returning ${formattedData.length} markets with Hyperliquid prices`);
+        res.json({
+          success: true,
+          data: formattedData
+        });
+      } else {
+        // NO MOCK DATA ALLOWED - Return error if Hyperliquid fails
+        console.error('[Markets] No Hyperliquid data available - cannot serve mock data');
+        res.status(503).json({ 
+          success: false, 
+          error: 'Market data service temporarily unavailable',
+          message: 'Unable to fetch live market data. Please try again in a moment.'
+        });
+      }
+    } catch (error) {
+      console.error('Markets error:', error); 
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to fetch market data',
+        message: 'Internal server error while fetching market data'
       });
     }
-  } catch (error) {
-    console.error('Markets error:', error); 
-    res.status(500).json({ success: false, error: 'Failed to fetch market data' });
-  }
-});
+  });
 
   app.get("/api/markets/:symbol", async (req, res) => {
     try {
@@ -2701,6 +2701,66 @@ app.get("/api/coincap/assets", async (req, res) => {
     }
   });
 
+  // Hyperliquid positions endpoint - FIXES 404 ERROR
+  app.get("/api/hyperliquid/positions", async (req, res) => {
+    try {
+      // Get wallet address from query or auth
+      const walletAddress = req.query.address as string || req.user?.claims?.sub;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Wallet address required',
+          message: 'Please provide a wallet address or authenticate'
+        });
+      }
+
+      // Import Hyperliquid client dynamically
+      const { hyperliquidClient } = await import('./lib/hyperliquid-client');
+      
+      // Get real positions from Hyperliquid
+      const positions = await hyperliquidClient.getUserPositions(walletAddress);
+      
+      if (!positions || positions.length === 0) {
+        console.log(`[Hyperliquid] No positions found for ${walletAddress}`);
+        res.json({
+          success: true,
+          data: [],
+          count: 0,
+          message: 'No open positions found'
+        });
+      } else {
+        console.log(`[Hyperliquid] Found ${positions.length} positions for ${walletAddress}`);
+        
+        // Format positions for frontend
+        const formattedPositions = positions.map((pos: any) => ({
+          symbol: pos.symbol,
+          side: pos.side,
+          size: pos.size,
+          entryPrice: pos.entryPrice,
+          pnl: pos.pnl,
+          leverage: pos.leverage,
+          liquidationPrice: pos.liquidationPrice,
+          timestamp: pos.timestamp
+        }));
+        
+        res.json({
+          success: true,
+          data: formattedPositions,
+          count: formattedPositions.length
+        });
+      }
+
+    } catch (error) {
+      console.error('[Hyperliquid] Error fetching positions:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to fetch positions',
+        message: 'Internal server error while fetching position data'
+      });
+    }
+  });
+
   // Orderbook endpoint
   app.get("/api/orderbook/:base/:quote", async (req, res) => {
     try {
@@ -2870,7 +2930,7 @@ app.get("/api/coincap/assets", async (req, res) => {
 
       await sgMail.send(msg);
       res.json({ success: true, message: "Email sent successfully" });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Email send error:", error);
       res.status(500).json({ error: "Failed to send email" });
     }
@@ -3241,6 +3301,11 @@ app.get("/api/coincap/assets", async (req, res) => {
   app.use('/api/test', webhookTestRoutes);
   console.log('[Routes] Test Webhook routes registered successfully');
 
+  // ALT5 Custodial Routes - For fiat-to-crypto on-ramp functionality
+  console.log('[Routes] Registering ALT5 Custodial routes...');
+  app.use('/api/alt5-custodial', alt5CustodialRoutes);
+  console.log('[Routes] ALT5 Custodial routes registered successfully');
+  
   // ALT5 Test Routes - For debugging ALT5 integration
   console.log('[Routes] Registering ALT5 Test routes...');
   const alt5TestRoutes = await import('./routes/alt5-test-routes');

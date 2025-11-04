@@ -1,0 +1,64 @@
+Based on my analysis of the current ALT5 integration and documentation, I can see the core issue: **the current implementation is completely backwards**. 
+
+## Current State Analysis
+
+### ❌ What's Wrong:
+- **Current ALT5 integration** creates wallets for users to **send crypto TO ALT5** (off-ramp)
+- **ALT5 on-ramp routes** are just mocks that don't use ALT5's actual custodial APIs
+- **FX swap system** is designed for Stripe + DEX flows, not ALT5's custodial model
+
+### ✅ What ALT5 Actually Offers:
+From the documentation, ALT5 provides a **custodial payout service** where:
+- User pays ALT5 via credit/bank transfer
+- ALT5 converts fiat → USDT internally  
+- ALT5 sends USDT directly to user's wallet address
+- Professional rates (2% fees vs retail 3-5%)
+- Webhook notifications for payment confirmations
+
+### 🎯 Target Flow (What You Want):
+```
+User pays ALT5 via bank/card → ALT5 converts → ALT5 sends USDT to user wallet
+```
+
+### 🔄 Current Flow (What Exists):
+```
+User sends crypto to ALT5 wallet → ALT5 converts → User gets fiat  
+```
+
+## Comprehensive Fix Plan
+
+### Phase 1: Core ALT5 On-Ramp Implementation
+1. **Create ALT5 Custodial Order API** - Use ALT5's order creation endpoint for fiat→crypto
+2. **Implement Proper Webhook Handling** - Handle ALT5's payment confirmations  
+3. **Update Database Schema** - Create tables for ALT5 custodial orders
+4. **Add Payment Status Tracking** - Real-time status updates from ALT5
+
+### Phase 2: Integration & Testing  
+5. **Replace Mock On-Ramp Routes** - Connect to real ALT5 custodial APIs
+6. **Add Error Handling** - Proper failure recovery and user notifications
+7. **Implement Rate Optimization** - Use ALT5's professional rates effectively
+8. **Add Monitoring** - Track conversion success rates and performance
+
+### Phase 3: User Experience
+9. **Update Frontend Components** - Show ALT5 on-ramp options
+10. **Add Payment Method Selection** - Bank transfer, card, wire options
+11. **Implement Order Tracking** - Real-time status for users
+
+## Key Technical Changes Needed
+
+### 1. New ALT5 Custodial Service
+- Replace wallet creation with order creation APIs
+- Handle fiat payment methods (bank, card, wire)
+- Process ALT5 webhooks for confirmations
+
+### 2. Database Schema Updates  
+- New tables for ALT5 custodial orders
+- Track fiat payments and crypto deliveries
+- Audit trail for compliance
+
+### 3. API Flow Changes
+- `POST /create-order` → ALT5 custodial order (not wallet creation)
+- Webhook handling for payment confirmations
+- Status checking via ALT5's order APIs
+
+Would you like me to proceed with implementing this fix? The core issue is that we're using ALT5's APIs backwards - we need to switch from their "receive crypto" APIs to their "send crypto" custodial APIs.

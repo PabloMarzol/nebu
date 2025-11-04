@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
 
 interface MarketItem {
   symbol: string;
@@ -12,72 +13,78 @@ interface MarketItem {
   volume24h: string;
 }
 
-// Always-available market data
-const STATIC_MARKET_DATA: MarketItem[] = [
-  {
-    symbol: "BTC/USDT",
-    name: "Bitcoin",
-    price: "64,889.45",
-    change24h: "2.34",
-    volume24h: "2847362891"
-  },
-  {
-    symbol: "ETH/USDT", 
-    name: "Ethereum",
-    price: "3,201.78",
-    change24h: "1.89",
-    volume24h: "1456782345"
-  },
-  {
-    symbol: "SOL/USDT",
-    name: "Solana", 
-    price: "198.32",
-    change24h: "-2.45",
-    volume24h: "892456123"
-  },
-  {
-    symbol: "ADA/USDT",
-    name: "Cardano",
-    price: "0.89",
-    change24h: "3.12",
-    volume24h: "456789234"
-  },
-  {
-    symbol: "DOT/USDT", 
-    name: "Polkadot",
-    price: "8.94",
-    change24h: "1.67",
-    volume24h: "234567891"
-  },
-  {
-    symbol: "LINK/USDT",
-    name: "Chainlink", 
-    price: "24.58",
-    change24h: "-1.23",
-    volume24h: "345678912"
-  },
-  {
-    symbol: "MATIC/USDT",
-    name: "Polygon",
-    price: "1.23",
-    change24h: "4.56",
-    volume24h: "567891234"
-  },
-  {
-    symbol: "UNI/USDT",
-    name: "Uniswap",
-    price: "12.45",
-    change24h: "2.78",
-    volume24h: "123456789"
-  },
-  {
-    symbol: "AAVE/USDT",
-    name: "Aave", 
-    price: "287.34",
-    change24h: "-0.89",
-    volume24h: "98765432"
-  }
-];
+// Real-time market data from Hyperliquid API with persistent state
+const useMarketData = () => {
+  const [markets, setMarkets] = useState<MarketItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastSuccessfulData, setLastSuccessfulData] = useState<MarketItem[]>([]);
+
+  useEffect(() => {
+    const fetchMarketData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/markets');
+        
+        if (!response.ok) {
+          // Check if it's a rate limiting error (429)
+          if (response.status === 429) {
+            console.warn('Market data temporarily unavailable due to rate limiting');
+            setError('Market data updating... please wait');
+            // Keep existing data during rate limiting
+            return;
+          }
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.data && data.data.length > 0) {
+          // Transform Hyperliquid data to our format
+          const transformedData: MarketItem[] = data.data.map((item: any) => ({
+            symbol: item.symbol,
+            name: item.symbol.split('/')[0], // Extract base currency name
+            price: item.price.toString(),
+            change24h: item.change24h.toString(),
+            volume24h: item.volume.toString()
+          }));
+          
+          setMarkets(transformedData);
+          setLastSuccessfulData(transformedData); // Store successful data
+          setError(null); // Clear any previous errors
+        } else if (data.success && data.data && data.data.length === 0) {
+          // Empty data but successful response - keep existing data
+          console.warn('Market data empty but successful response');
+          setError('Market data temporarily unavailable');
+        } else {
+          throw new Error('Invalid market data format');
+        }
+      } catch (err) {
+        console.error('Error fetching market data:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch market data';
+        
+        // Only set error message, keep existing data
+        setError(errorMessage);
+        
+        // If we have no data at all, show a message but don't clear markets
+        if (lastSuccessfulData.length === 0) {
+          setError('Connecting to Hyperliquid markets...');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMarketData();
+    
+    // Refresh data every 30 seconds for live updates
+    const interval = setInterval(fetchMarketData, 30000);
+    
+    return () => clearInterval(interval);
+  }, [lastSuccessfulData.length]);
+
+  return { markets: markets.length > 0 ? markets : lastSuccessfulData, loading, error };
+};
 
 const formatVolume = (volume: string) => {
   const num = parseFloat(volume);
@@ -108,6 +115,7 @@ interface SimpleMarketTableProps {
 export default function SimpleMarketTable({ searchTerm }: SimpleMarketTableProps) {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  const { markets, loading, error } = useMarketData();
 
   const handleTrade = (symbol: string) => {
     toast({
@@ -120,11 +128,62 @@ export default function SimpleMarketTable({ searchTerm }: SimpleMarketTableProps
       setLocation('/trading');
     }, 1000);
   };
-  const filteredMarkets = STATIC_MARKET_DATA.filter((market) => {
+
+  // Filter markets based on search term
+  const filteredMarkets = markets.filter((market: MarketItem) => {
     const matchesSearch = market.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          market.name.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesSearch;
   });
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="text-center py-8">
+        <div className="animate-pulse space-y-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="grid grid-cols-12 gap-4 items-center p-4 rounded-lg border">
+              <div className="col-span-3 flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-full bg-muted animate-pulse"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded animate-pulse"></div>
+                  <div className="h-3 bg-muted rounded animate-pulse"></div>
+                </div>
+              </div>
+              <div className="col-span-2 h-4 bg-muted rounded animate-pulse"></div>
+              <div className="col-span-2 h-4 bg-muted rounded animate-pulse"></div>
+              <div className="col-span-3 h-4 bg-muted rounded animate-pulse"></div>
+              <div className="col-span-2 h-8 bg-muted rounded animate-pulse"></div>
+            </div>
+          ))}
+        </div>
+        <p className="text-muted-foreground mt-4">Loading live market data from Hyperliquid...</p>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <div className="text-red-500 mb-4">
+          <p className="font-medium">Failed to load market data</p>
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
+        <p className="text-muted-foreground">Using live data from Hyperliquid API</p>
+      </div>
+    );
+  }
+
+  // Show no data state
+  if (markets.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">No market data available</p>
+        <p className="text-sm text-muted-foreground mt-2">Connecting to Hyperliquid markets...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -136,7 +195,7 @@ export default function SimpleMarketTable({ searchTerm }: SimpleMarketTableProps
         <div className="col-span-2 text-center">Action</div>
       </div>
 
-      {filteredMarkets.map((market) => (
+      {filteredMarkets.map((market: MarketItem) => (
         <div key={market.symbol} className="grid grid-cols-12 gap-4 items-center p-4 rounded-lg border hover:bg-accent/50 transition-colors">
           <div className="col-span-3">
             <div className="flex items-center space-x-3">

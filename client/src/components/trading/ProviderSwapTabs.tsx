@@ -7,7 +7,7 @@ import { CreditCard, Bitcoin, ExternalLink, ArrowLeftRight, Zap, Shield, Globe, 
 import { useToast } from "@/hooks/use-toast";
 import { useWalletAuth } from "@/hooks/useWalletAuth";
 import FXProSwap from './FX-ProSwap';
-import FXALT5Swap from './FX-ALT5-Swap';
+import Alt5CustodialOnramp from '../fx-swap/alt5-custodial-onramp';
 import FXNOWSwap from './FX-NOW-Swap';
 import FXCRYSwap from './FX-CRY-Swap';
 import FXRAMPSwap from './FX-RAMP-Swap';
@@ -44,7 +44,7 @@ export default function ProviderSwapTabs({ defaultTab = "stripe" }: ProviderSwap
     {
       id: 'alt5pay',
       name: 'FX-ALT5-Swap',
-      component: FXALT5Swap,
+      component: Alt5CustodialOnramp,
       icon: Bitcoin,
       color: 'from-orange-500 to-red-600',
       description: 'Cryptocurrency exchange with fast settlement',

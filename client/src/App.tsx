@@ -122,6 +122,7 @@ import TradingFees from "@/pages/trading-fees";
 import InteractiveDemo from "@/pages/interactive-demo";
 import Support from "@/pages/support";
 import PaymentSuccess from "@/pages/payment-success";
+import TestTradingLayout from "@/pages/test-trading-layout";
 import RecoveryDashboard from "@/components/RecoveryDashboard";
 
 // Gamification Features
@@ -305,6 +306,7 @@ function Router() {
         <Route path="/payment" component={() => <EnhancedPaymentGateway />} />
         <Route path="/payments" component={() => <EnhancedPaymentGateway />} />
         <Route path="/payment-success" component={PaymentSuccess} />
+        <Route path="/test-trading-layout" component={TestTradingLayout} />
 
         
         <Route component={NotFound} />

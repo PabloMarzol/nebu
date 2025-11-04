@@ -14,7 +14,7 @@
     "deploy": "node scripts/deploy-minimal.js",
     "deploy:prod": "cross-env NODE_ENV=production node scripts/deploy-minimal.js",
     "build:prod": "cross-env NODE_ENV=production npm run build",
-    "health": "curl -s http://localhost:5000/api/health | jq .",
+    "health": "curl -s http://localhost:5000/api/health",
     "test:api": "node test-complete-solution.js"
   },
   "dependencies": {
@@ -81,6 +81,8 @@
     "express-rate-limit": "^7.5.1",
     "framer-motion": "^11.18.2",
     "git-filter-repo": "^0.0.30",
+    "grep": "^0.1.0",
+    "groq-sdk": "^0.34.0",
     "helmet": "^8.1.0",
     "html2canvas": "^1.4.1",
     "input-otp": "^1.4.2",

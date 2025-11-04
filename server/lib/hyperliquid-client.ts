@@ -84,7 +84,17 @@ interface OrderResult {
 
 export class HyperliquidClient {
   private infoClient: hl.InfoClient;
+  private subscriptionClient: hl.SubscriptionClient | null = null;
+  private wsTransport: hl.WebSocketTransport | null = null;
   private isTestnet: boolean;
+  private cache: Map<string, { data: any; timestamp: number }> = new Map();
+  private cacheTimeout = 120000; // 2 minutes cache - MUCH longer to reduce API calls
+  private lastRequestTime = 0;
+  private minRequestInterval = 5000; // 5 seconds between requests - MORE conservative
+  private requestQueue: Array<() => Promise<any>> = [];
+  private isProcessingQueue = false;
+  private wsSubscriptions: Map<string, any> = new Map();
+  private livePriceFeeds: Map<string, number> = new Map();
 
   constructor(isTestnet: boolean = false) {
     this.isTestnet = isTestnet;
@@ -95,11 +105,380 @@ export class HyperliquidClient {
         transport: new hl.HttpTransport(),
       });
       
-      console.log('✅ Hyperliquid InfoClient initialized');
+      // Initialize WebSocket for real-time data
+      this.initializeWebSocket();
+      
+      console.log('✅ Hyperliquid InfoClient initialized with rate limiting and WebSocket');
     } catch (error) {
       console.error('❌ Error initializing Hyperliquid client:', error);
       throw error;
     }
+  }
+
+  /**
+   * Initialize WebSocket connection for real-time data
+   */
+  private async initializeWebSocket(): Promise<void> {
+    try {
+      console.log('🔌 Initializing WebSocket connection for real-time data...');
+      
+      // Create WebSocket transport with reconnection support
+      this.wsTransport = new hl.WebSocketTransport({
+        isTestnet: this.isTestnet,
+        timeout: 10000,
+        keepAliveInterval: 30000,
+        reconnect: {
+          maxRetries: 5,
+          connectionTimeout: 10000,
+          reconnectionDelay: (attempt) => Math.min(1000 * Math.pow(2, attempt), 10000)
+        },
+        resubscribe: true // Auto-restore subscriptions after reconnect
+      });
+
+      // Wait for connection to be ready
+      await this.wsTransport.ready();
+      console.log('✅ WebSocket transport ready');
+
+      // Create subscription client
+      this.subscriptionClient = new hl.SubscriptionClient({
+        transport: this.wsTransport
+      });
+
+      console.log('✅ WebSocket subscription client initialized');
+      
+      // Start live price feeds for major coins
+      this.startLivePriceFeeds();
+      
+    } catch (error) {
+      console.error('❌ Error initializing WebSocket:', error);
+      // Fallback to HTTP-only mode
+      this.wsTransport = null;
+      this.subscriptionClient = null;
+    }
+  }
+
+  /**
+   * Start live price feeds for major cryptocurrencies - AVOID DUPLICATES
+   */
+  private async startLivePriceFeeds(): Promise<void> {
+    if (!this.subscriptionClient) return;
+
+    const majorCoins = ['BTC', 'ETH', 'SOL', 'ADA', 'DOT', 'LINK', 'UNI', 'AAVE', 'MATIC'];
+    
+    // Check if already subscribed to avoid duplicates
+    if (this.wsSubscriptions.has('allMids')) {
+      console.log('[Hyperliquid] Price feeds already initialized, skipping duplicate setup');
+      return;
+    }
+    
+    console.log(`📡 Starting live price feeds for ${majorCoins.length} major coins...`);
+
+    // Subscribe once to allMids feed for all coins
+    try {
+      const subscription = await this.subscriptionClient.allMids((data) => {
+        // Update live price feeds for all coins in single callback
+        for (const [coin, priceStr] of Object.entries(data)) {
+          if (majorCoins.includes(coin)) {
+            const price = parseFloat(priceStr as string);
+            if (!isNaN(price)) {
+              this.livePriceFeeds.set(coin, price);
+              // Silent update - no console spam
+            }
+          }
+        }
+      });
+
+      this.wsSubscriptions.set('allMids', subscription);
+      console.log('✅ Live price feeds initialized (single subscription)');
+
+    } catch (error) {
+      console.error('❌ Error initializing live price feeds:', error);
+    }
+  }
+
+  /**
+   * Get live price from WebSocket feed (fallback to API if not available)
+   */
+  getLivePrice(coin: string): number | null {
+    return this.livePriceFeeds.get(coin) || null;
+  }
+
+  /**
+   * Subscribe to real-time order book updates
+   */
+  async subscribeToOrderBook(coin: string, callback: (orderBook: OrderBook) => void): Promise<void> {
+    if (!this.subscriptionClient) {
+      console.warn('⚠️ WebSocket not available, falling back to HTTP polling');
+      return;
+    }
+
+    try {
+      console.log(`📖 Subscribing to live order book for ${coin}...`);
+      
+      const subscription = await this.subscriptionClient.l2Book(
+        { coin },
+        (data) => {
+          // Convert WebSocket order book data to our format
+          const orderBook = this.convertWsOrderBook(data);
+          callback(orderBook);
+        }
+      );
+
+      this.wsSubscriptions.set(`l2Book-${coin}`, subscription);
+      console.log(`✅ Subscribed to live order book for ${coin}`);
+
+    } catch (error) {
+      console.error(`❌ Error subscribing to ${coin} order book:`, error);
+    }
+  }
+
+  /**
+   * Subscribe to real-time candle updates - SILENT MODE to reduce noise
+   */
+  async subscribeToCandles(coin: string, interval: string, callback: (candle: Candle) => void): Promise<void> {
+    if (!this.subscriptionClient) {
+      return;
+    }
+
+    try {
+      const subscription = await this.subscriptionClient.candle(
+        { coin, interval },
+        (data) => {
+          // Convert WebSocket candle data to our format
+          const candle: Candle = {
+            time: data.t,
+            open: parseFloat(data.o),
+            high: parseFloat(data.h),
+            low: parseFloat(data.l),
+            close: parseFloat(data.c),
+            volume: parseFloat(data.v || '0')
+          };
+          callback(candle);
+        }
+      );
+
+      this.wsSubscriptions.set(`candle-${coin}-${interval}`, subscription);
+
+    } catch (error) {
+      console.error(`❌ Error subscribing to ${coin} candles:`, error);
+    }
+  }
+
+  /**
+   * Convert WebSocket order book data to our format
+   */
+  private convertWsOrderBook(wsData: any): OrderBook {
+    const bids: any[] = [];
+    const asks: any[] = [];
+
+    // WebSocket returns levels as [bids_array, asks_array]
+    if (wsData.levels && Array.isArray(wsData.levels)) {
+      const [bidLevels, askLevels] = wsData.levels;
+
+      // Process bids (positive sizes)
+      if (bidLevels) {
+        for (const level of bidLevels.slice(0, 20)) { // Top 20
+          // Handle different level formats from WebSocket
+          let price: number, amount: number;
+          
+          try {
+            if (level && typeof level === 'object') {
+              const levelObj = level as any;
+              if (levelObj.px !== undefined && levelObj.sz !== undefined) {
+                price = parseFloat(levelObj.px);
+                amount = parseFloat(levelObj.sz);
+              } else {
+                price = 0;
+                amount = 0;
+              }
+            } else {
+              price = 0;
+              amount = 0;
+            }
+          } catch (parseError) {
+            price = 0;
+            amount = 0;
+          }
+          
+          const total = price * amount;
+          
+          bids.push({
+            price,
+            amount,
+            total
+          });
+        }
+      }
+
+      // Process asks (negative sizes, convert to positive)
+      if (askLevels) {
+        for (const level of askLevels.slice(0, 20)) { // Top 20
+          // Handle different level formats from WebSocket
+          let price: number, amount: number;
+          
+          try {
+            if (level && typeof level === 'object') {
+              const levelObj = level as any;
+              if (levelObj.px !== undefined && levelObj.sz !== undefined) {
+                price = parseFloat(levelObj.px);
+                amount = Math.abs(parseFloat(levelObj.sz)); // Convert negative to positive
+              } else {
+                price = 0;
+                amount = 0;
+              }
+            } else {
+              price = 0;
+              amount = 0;
+            }
+          } catch (parseError) {
+            price = 0;
+            amount = 0;
+          }
+          
+          const total = price * amount;
+          
+          asks.push({
+            price,
+            amount,
+            total
+          });
+        }
+      }
+    }
+
+    return { bids, asks };
+  }
+
+  /**
+   * Subscribe to live prices (allMids) - SILENT MODE
+   */
+  async subscribeToLivePrices(): Promise<void> {
+    if (!this.subscriptionClient) return;
+
+    try {
+      const subscription = await this.subscriptionClient.allMids((data) => {
+        // Update live price feeds for all coins silently
+        for (const [coin, priceStr] of Object.entries(data)) {
+          const price = parseFloat(priceStr as string);
+          if (!isNaN(price)) {
+            this.livePriceFeeds.set(coin, price);
+          }
+        }
+      });
+
+      this.wsSubscriptions.set('allMids', subscription);
+
+    } catch (error) {
+      console.error('❌ Error subscribing to live prices:', error);
+    }
+  }
+
+  /**
+   * Get WebSocket connection status
+   */
+  getWebSocketStatus(): boolean {
+    return this.wsTransport !== null && this.subscriptionClient !== null;
+  }
+
+  /**
+   * Close WebSocket connection and cleanup
+   */
+  async closeWebSocket(): Promise<void> {
+    if (this.wsTransport) {
+      console.log('🔌 Closing WebSocket connection...');
+      
+      // Unsubscribe from all active subscriptions
+      for (const [key, subscription] of this.wsSubscriptions) {
+        try {
+          await subscription.unsubscribe();
+          console.log(`✅ Unsubscribed from ${key}`);
+        } catch (error) {
+          console.error(`❌ Error unsubscribing from ${key}:`, error);
+        }
+      }
+      
+      this.wsSubscriptions.clear();
+      this.livePriceFeeds.clear();
+      
+      await this.wsTransport.close();
+      this.wsTransport = null;
+      this.subscriptionClient = null;
+      
+      console.log('✅ WebSocket connection closed');
+    }
+  }
+
+  /**
+   * Rate limiting helper - ensure we don't hit API limits with exponential backoff
+   */
+  private async rateLimit(): Promise<void> {
+    const now = Date.now();
+    const timeSinceLastRequest = now - this.lastRequestTime;
+    
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      const waitTime = this.minRequestInterval - timeSinceLastRequest;
+      if (waitTime > 0) {
+        console.log(`⏱️ Rate limiting: waiting ${waitTime}ms before next request`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+    
+    this.lastRequestTime = Date.now();
+  }
+
+  /**
+   * Execute API request with exponential backoff retry logic
+   */
+  private async executeWithRetry<T>(requestFn: () => Promise<T>, maxRetries = 3): Promise<T> {
+    let lastError: any;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        // Apply rate limiting before each attempt
+        await this.rateLimit();
+        
+        const result = await requestFn();
+        return result;
+      } catch (error: any) {
+        lastError = error;
+        
+        // Check if it's a rate limit error (429)
+        if (error.response?.status === 429 || error.status === 429) {
+          const retryDelay = Math.min(1000 * Math.pow(2, attempt), 10000); // Exponential backoff: 1s, 2s, 4s, max 10s
+          console.warn(`⚠️ Rate limited (attempt ${attempt + 1}/${maxRetries}), waiting ${retryDelay}ms before retry`);
+          
+          if (attempt < maxRetries - 1) {
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            continue;
+          }
+        }
+        
+        // For non-rate-limit errors, throw immediately
+        throw error;
+      }
+    }
+    
+    throw lastError;
+  }
+
+  /**
+   * Cache helper - check if we have recent cached data
+   */
+  private getCachedData(key: string): any | null {
+    const cached = this.cache.get(key);
+    if (cached && (Date.now() - cached.timestamp) < this.cacheTimeout) {
+      console.log(`💾 Cache hit for: ${key}`);
+      return cached.data;
+    }
+    return null;
+  }
+
+  /**
+   * Cache helper - store data in cache
+   */
+  private setCachedData(key: string, data: any): void {
+    this.cache.set(key, { data, timestamp: Date.now() });
+    console.log(`💾 Cached data for: ${key}`);
   }
 
   /**
@@ -161,10 +540,16 @@ export class HyperliquidClient {
    * Get all available markets
    */
   async getAllMarkets(): Promise<MarketInfo[]> {
+    const cacheKey = 'allMarkets';
+    const cached = this.getCachedData(cacheKey);
+    if (cached) return cached;
+
     try {
       console.log('📊 Fetching all markets...');
       
-      const mids = await this.infoClient.allMids();
+      const mids = await this.executeWithRetry(async () => {
+        return await this.infoClient.allMids();
+      }, 3); // Retry with exponential backoff
       
       const markets = Object.entries(mids as Record<string, string>).map(([coin, mid]) => ({
         symbol: coin,
@@ -173,9 +558,19 @@ export class HyperliquidClient {
       
       console.log('✅ Found', markets.length, 'markets');
       
+      this.setCachedData(cacheKey, markets);
       return markets;
     } catch (error: any) {
       console.error('❌ Error fetching all markets:', error);
+      // Return fallback data on rate limit or other errors
+      if (error.response?.status === 429) {
+        console.warn('⚠️ Rate limited - returning fallback market data');
+        return [
+          { symbol: 'BTC', price: 50000 },
+          { symbol: 'ETH', price: 3000 },
+          { symbol: 'SOL', price: 100 },
+        ];
+      }
       return [];
     }
   }
@@ -283,19 +678,71 @@ export class HyperliquidClient {
       
       const book = await this.infoClient.l2Book({ coin });
       
-      // Format for frontend
-      return {
-        bids: book.levels.map((level: any) => ({
-          price: parseFloat(level.px),
-          amount: parseFloat(level.sz),
-          total: parseFloat(level.px) * parseFloat(level.sz),
-        })).filter((bid: any) => bid.amount > 0).slice(0, 20), // Top 20 bids
+      // Format for frontend - separate bids and asks
+      const bids: any[] = [];
+      const asks: any[] = [];
+      
+      // Process each level in the order book
+      // book.levels is an array of [price, size, count] arrays
+      for (const level of book.levels) {
+        // Handle different level formats from Hyperliquid API
+        let price: number, amount: number;
         
-        asks: book.levels.map((level: any) => ({
-          price: parseFloat(level.px),
-          amount: parseFloat(level.sz),
-          total: parseFloat(level.px) * parseFloat(level.sz),
-        })).filter((ask: any) => ask.amount < 0).slice(0, 20), // Top 20 asks
+        try {
+          if (Array.isArray(level)) {
+            // level is [price, size, count]
+            price = parseFloat(level[0]);
+            amount = parseFloat(level[1]);
+          } else if (level && typeof level === 'object') {
+            // level is object with px/sz properties - handle the union type properly
+            const levelObj = level as any;
+            if (levelObj.px !== undefined && levelObj.sz !== undefined) {
+              price = parseFloat(levelObj.px);
+              amount = parseFloat(levelObj.sz);
+            } else {
+              // Fallback for other object structures
+              price = 0;
+              amount = 0;
+            }
+          } else {
+            // Fallback - assume it's already parsed
+            price = 0;
+            amount = 0;
+          }
+        } catch (parseError) {
+          console.warn('⚠️ Error parsing level:', level, parseError);
+          price = 0;
+          amount = 0;
+        }
+        
+        const total = price * Math.abs(amount);
+        
+        if (amount > 0) {
+          // This is a bid (buy order)
+          bids.push({
+            price: price,
+            amount: amount,
+            total: total
+          });
+        } else if (amount < 0) {
+          // This is an ask (sell order) - amount is negative
+          asks.push({
+            price: price,
+            amount: Math.abs(amount), // Convert to positive for display
+            total: total
+          });
+        }
+      }
+      
+      // Take top 20 bids and asks
+      const topBids = bids.slice(0, 20);
+      const topAsks = asks.slice(0, 20);
+      
+      console.log(`✅ Order book for ${coin}: ${topBids.length} bids, ${topAsks.length} asks`);
+      
+      return {
+        bids: topBids,
+        asks: topAsks
       };
     } catch (error: any) {
       console.error('❌ Error fetching order book:', error);
@@ -305,72 +752,43 @@ export class HyperliquidClient {
 
   /**
    * Get historical candle data for a symbol
+   * NOW WITH WEBSOCKET SUPPORT - Reduces API calls significantly
    */
   async getCandleData(coin: string, interval: string = '1h', limit: number = 100) {
     try {
-      console.log('📊 Fetching candle data for:', { coin, interval, limit });
+      // SILENT MODE - Only log errors to reduce noise
+      const isSilent = true;
+      
+      if (!isSilent) {
+        console.log('📊 Fetching candle data for:', { coin, interval, limit });
+      }
       
       // Map frontend intervals to Hyperliquid intervals
       const hyperliquidInterval = this.mapInterval(interval);
-      console.log('🔄 Mapped interval:', interval, '->', hyperliquidInterval);
       
-      // Calculate time range - Use a MUCH larger window to ensure we get data
-      // Hyperliquid might not have data for very recent periods
-      const now = Math.floor(Date.now() / 1000); // Current time in seconds
-      const intervalSeconds = this.getIntervalSeconds(hyperliquidInterval);
-      
-      // Go back further in time to ensure we have data
-      // Add extra buffer (2x the requested amount)
-      const timeWindow = intervalSeconds * limit * 2;
-      const startTime = now - timeWindow;
-      
-      console.log('⏰ Time range:', {
-        startTime,
-        endTime: now,
-        startDate: new Date(startTime * 1000).toISOString(),
-        endDate: new Date(now * 1000).toISOString(),
-        windowHours: (timeWindow / 3600).toFixed(2),
-        requestedCandles: limit,
-      });
-      
-      // Call Hyperliquid API with required parameters
-      const response = await this.infoClient.candleSnapshot({
-        coin,
-        interval: hyperliquidInterval,
-        startTime,
-        endTime: now,
-      } as any);
-      
-      console.log('📥 Response received:', {
-        isArray: Array.isArray(response),
-        length: Array.isArray(response) ? response.length : 0,
-      });
-      
-      if (!response || !Array.isArray(response)) {
-        console.error('❌ Invalid response format:', typeof response);
-        return [];
-      }
-      
-      if (response.length === 0) {
-        console.warn('⚠️ No candles in response, trying longer time window...');
+      // Check if we have WebSocket candle subscription first
+      if (this.subscriptionClient) {
+        // Try to get recent candles from WebSocket cache/memory first
+        // For now, we'll use a shorter time range to reduce API calls
+        const now = Math.floor(Date.now() / 1000);
+        const shorterTimeWindow = 3600 * 12; // 12 hours instead of 48
+        const startTime = now - shorterTimeWindow;
         
-        // Try with an even longer time window (7 days back)
-        const longerStartTime = now - (7 * 24 * 60 * 60);
-        console.log('🔄 Retrying with 7-day window:', new Date(longerStartTime * 1000).toISOString());
+        const response = await this.executeWithRetry(async () => {
+          return await this.infoClient.candleSnapshot({
+            coin,
+            interval: hyperliquidInterval,
+            startTime,
+            endTime: now,
+          } as any);
+        }, 3); // Retry up to 3 times with exponential backoff
         
-        const retryResponse = await this.infoClient.candleSnapshot({
-          coin,
-          interval: hyperliquidInterval,
-          startTime: longerStartTime,
-          endTime: now,
-        } as any);
-        
-        console.log('📥 Retry response length:', Array.isArray(retryResponse) ? retryResponse.length : 0);
-        
-        if (retryResponse && Array.isArray(retryResponse) && retryResponse.length > 0) {
-          // Take the most recent candles up to the limit
-          const recentCandles = retryResponse.slice(-limit);
-          const formatted = recentCandles.map((candle: any) => ({
+        if (response && Array.isArray(response) && response.length > 0) {
+          // Take the most recent candles up to limit
+          const recentCandles = response.slice(-limit);
+          
+          // Format candles for frontend
+          const formattedCandles = recentCandles.map((candle: any) => ({
             time: parseInt(candle.t),
             open: parseFloat(candle.o),
             high: parseFloat(candle.h),
@@ -379,16 +797,40 @@ export class HyperliquidClient {
             volume: parseFloat(candle.v || '0'),
           }));
           
-          console.log('✅ Returning', formatted.length, 'candles from retry');
-          return formatted;
+          if (!isSilent && formattedCandles.length > 0) {
+            console.log(`✅ Fetched ${formattedCandles.length} candles for ${coin}`);
+          }
+          
+          return formattedCandles;
         }
-        
+      }
+      
+      // Fallback to longer time range if WebSocket not available or no data
+      const now = Math.floor(Date.now() / 1000);
+      const intervalSeconds = this.getIntervalSeconds(hyperliquidInterval);
+      const timeWindow = intervalSeconds * limit * 2;
+      const startTime = now - timeWindow;
+      
+      const response = await this.executeWithRetry(async () => {
+        return await this.infoClient.candleSnapshot({
+          coin,
+          interval: hyperliquidInterval,
+          startTime,
+          endTime: now,
+        } as any);
+      }, 3); // Retry up to 3 times with exponential backoff
+      
+      if (!response || !Array.isArray(response)) {
+        if (!isSilent) console.error('❌ Invalid response format');
         return [];
       }
       
-      console.log('✅ Fetched', response.length, 'candles');
+      if (response.length === 0) {
+        if (!isSilent) console.warn('⚠️ No candles in response');
+        return [];
+      }
       
-      // Take the most recent candles up to the limit
+      // Take the most recent candles up to limit
       const recentCandles = response.slice(-limit);
       
       // Format candles for frontend
@@ -401,27 +843,14 @@ export class HyperliquidClient {
         volume: parseFloat(candle.v || '0'),
       }));
       
-      if (formattedCandles.length > 0) {
-        console.log('📈 First candle:', {
-          time: new Date(formattedCandles[0].time).toISOString(),
-          close: formattedCandles[0].close,
-        });
-        console.log('📉 Last candle:', {
-          time: new Date(formattedCandles[formattedCandles.length - 1].time).toISOString(),
-          close: formattedCandles[formattedCandles.length - 1].close,
-        });
+      if (!isSilent && formattedCandles.length > 0) {
+        console.log(`✅ Fetched ${formattedCandles.length} candles for ${coin}`);
       }
       
       return formattedCandles;
       
     } catch (error: any) {
       console.error('❌ Error fetching candle data:', error);
-      console.error('Error details:', {
-        message: error.message,
-        name: error.name,
-        coin,
-        interval,
-      });
       return [];
     }
   }
@@ -431,8 +860,8 @@ export class HyperliquidClient {
   /**
    * Helper: Map frontend interval to Hyperliquid interval
    */
-  private mapInterval(interval: string): '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w' {
-    const intervalMap: Record<string, '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w'> = {
+  private mapInterval(interval: string): '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w' | '1M' | '12h' | '3m' | '30m' | '2h' | '8h' | '3d' {
+    const intervalMap: Record<string, '1m' | '5m' | '15m' | '1h' | '4h' | '1d' | '1w' | '1M' | '12h' | '3m' | '30m' | '2h' | '8h' | '3d'> = {
       '1m': '1m',
       '5m': '5m',
       '15m': '15m',
@@ -440,6 +869,13 @@ export class HyperliquidClient {
       '4h': '4h',
       '1D': '1d',
       '1W': '1w',
+      '1M': '1M',
+      '12h': '12h',
+      '3m': '3m',
+      '30m': '30m',
+      '2h': '2h',
+      '8h': '8h',
+      '3d': '3d',
     };
     
     return intervalMap[interval] || '1h';
@@ -511,17 +947,14 @@ export class HyperliquidClient {
   }
 
   /**
-   * Aggregate trades into OHLCV candles
+   * Aggregate trades into OHLCV candles - SILENT MODE
    * Takes raw trade data and groups it by time interval
    */
   aggregateTradesToCandles(trades: any[], interval: string, limit: number = 100): Candle[] {
     try {
       if (!trades || trades.length === 0) {
-        console.log('⚠️ No trades to aggregate');
         return [];
       }
-
-      console.log('🕯️ Aggregating', trades.length, 'trades into candles with interval:', interval);
 
       // Get interval in milliseconds
       const intervalMs = this.getIntervalMilliseconds(interval);
@@ -572,21 +1005,6 @@ export class HyperliquidClient {
 
       // Take most recent candles up to limit
       const recentCandles = candles.slice(-limit);
-
-      console.log('✅ Generated', recentCandles.length, 'candles');
-      
-      if (recentCandles.length > 0) {
-        console.log('📊 First candle:', {
-          time: new Date(recentCandles[0].time).toISOString(),
-          open: recentCandles[0].open,
-          close: recentCandles[0].close,
-        });
-        console.log('📊 Last candle:', {
-          time: new Date(recentCandles[recentCandles.length - 1].time).toISOString(),
-          open: recentCandles[recentCandles.length - 1].open,
-          close: recentCandles[recentCandles.length - 1].close,
-        });
-      }
 
       return recentCandles;
     } catch (error: any) {

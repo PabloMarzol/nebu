@@ -8,9 +8,6 @@ const COINAPI_KEY = process.env.COINAPI_KEY;
 const COINAPI_WS_URL = 'wss://ws.coinapi.io/v1/';
 const COINAPI_REST_URL = 'https://rest.coinapi.io/v1';
 
-// CryptoCompare API configuration
-const CRYPTOCOMPARE_API_KEY = process.env.CRYPTOCOMPARE_API_KEY;
-
 // Coinbase Pro API configuration
 const COINBASE_API_KEY = process.env.COINBASE_API_KEY;
 const COINBASE_SECRET = process.env.COINBASE_SECRET_KEY;
@@ -156,52 +153,28 @@ class LivePriceFeed {
   }
 }
 
-// CryptoCompare backup data source
-class CryptoCompareBackup {
-  private apiKey = process.env.CRYPTOCOMPARE_API_KEY;
-  private baseUrl = 'https://min-api.cryptocompare.com/data';
-
-  async getLatestPrices(symbols: string[]): Promise<any> {
-    try {
-      const fsyms = symbols.join(',');
-      const response = await fetch(
-        `${this.baseUrl}/pricemultifull?fsyms=${fsyms}&tsyms=USD&api_key=${this.apiKey}`
-      );
-      
-      if (!response.ok) {
-        throw new Error(`CryptoCompare error: ${response.status}`);
-      }
-      
-      return await response.json();
-    } catch (error) {
-      console.error('[CryptoCompare] Error fetching prices:', error);
-      throw error;
-    }
-  }
-
+// Simple market data updater using CoinAPI REST as backup
+class MarketDataUpdater {
   async updateMarketData() {
     try {
       const symbols = ['BTC', 'ETH', 'SOL', 'ADA', 'DOT'];
-      const data = await this.getLatestPrices(symbols);
       
-      if (data.RAW) {
-        for (const symbol of symbols) {
-          if (data.RAW[symbol] && data.RAW[symbol].USD) {
-            const priceData = data.RAW[symbol].USD;
+      for (const symbol of symbols) {
+        try {
+          const priceData = await getLatestPrice(`${symbol}/USD`);
+          if (priceData) {
             await storage.updateMarketData(`${symbol}/USDT`, {
-              price: priceData.PRICE.toFixed(8),
-              change24h: priceData.CHANGEPCT24HOUR.toFixed(2),
-              volume24h: priceData.VOLUME24HOUR.toString(),
-              high24h: priceData.HIGH24HOUR.toFixed(8),
-              low24h: priceData.LOW24HOUR.toFixed(8),
+              price: priceData.price.toFixed(8),
               updatedAt: new Date()
             });
           }
+        } catch (error) {
+          console.error(`[MarketData] Error updating ${symbol}:`, error);
         }
-        console.log('[CryptoCompare] Updated market data for backup');
       }
+      console.log('[MarketData] Updated market data');
     } catch (error) {
-      console.error('[CryptoCompare] Backup update failed:', error);
+      console.error('[MarketData] Update failed:', error);
     }
   }
 }
@@ -209,6 +182,10 @@ class CryptoCompareBackup {
 // Simple REST API fallback for CoinAPI
 export async function getLatestPrice(symbol: string): Promise<any> {
   try {
+    if (!COINAPI_KEY) {
+      throw new Error('CoinAPI key not configured');
+    }
+    
     const response = await fetch(
       `${COINAPI_REST_URL}/exchangerate/${symbol}`, 
       {
@@ -236,19 +213,18 @@ export async function getLatestPrice(symbol: string): Promise<any> {
 
 // Export main price feed instance
 export const priceFeed = new LivePriceFeed();
-export const cryptoCompareBackup = new CryptoCompareBackup();
+export const marketDataUpdater = new MarketDataUpdater();
 
-// Initialize the price feed with CryptoCompare as primary
-export function initializeLivePriceFeed() {
-  console.log('[LivePriceFeed] Initializing with CryptoCompare as primary data source...');
+// Initialize the price feed with Hyperliquid market data
+export async function initializeLivePriceFeed() {
+  console.log('[LivePriceFeed] Initializing with Hyperliquid market data...');
   
-  // Use CryptoCompare as primary with frequent updates
-  setInterval(() => {
-    cryptoCompareBackup.updateMarketData();
-  }, 10000); // Update every 10 seconds for real-time feel
-  
-  // Initial update
-  cryptoCompareBackup.updateMarketData();
-  
-  console.log('[LivePriceFeed] CryptoCompare live updates active');
+  // Use Hyperliquid for market data updates
+  try {
+    const { initializeHyperliquidMarketData } = await import('./hyperliquid-market-data');
+    initializeHyperliquidMarketData();
+    console.log('[LivePriceFeed] Hyperliquid market data service active');
+  } catch (error) {
+    console.error('[LivePriceFeed] Failed to initialize Hyperliquid market data:', error);
+  }
 }

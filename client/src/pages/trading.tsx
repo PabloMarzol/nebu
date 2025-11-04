@@ -8,7 +8,6 @@ import PortfolioOverview from "@/components/trading/portfolio-overview";
 import RecentTrades from "@/components/trading/recent-trades";
 import PortfolioQuickActions from "@/components/trading/portfolio-quick-actions";
 import SimpleAIChat from "@/components/trading/simple-ai-chat";
-import CryptoEmotionTracker from "@/components/trading/crypto-emotion-tracker";
 import NFTMarketplace from "@/components/trading/nft-marketplace";
 import PersonalizedLearning from "@/components/trading/personalized-learning";
 import AIPortfolioBalancer from "@/components/trading/ai-portfolio-balancer";
@@ -29,14 +28,233 @@ import { LivePriceWithChange } from "@/components/trading/live-market-ticker";
 import APIServicesDashboard from "@/components/trading/api-services-dashboard";
 
 import HyperliquidTradingPanel from "@/components/trading/hyperliquid-trading-panel";
+import TradingDashboard from "@/components/trading/trading-dashboard";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { AlertTriangle, X, ChevronDown } from "lucide-react";
+import { AlertTriangle, X, ChevronDown, TrendingUp } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import SwapInterface from "@/components/trading/SwapInterface";
 import ProtectedTradingWrapper from "@/components/auth/protected-trading-wrapper";
 import EnhancedTradingInterface from "@/components/trading/enhanced-trading-interface";
 import PortfolioBalanceDisplay from "@/components/trading/portfolio-balance-display";
+
+// Enhanced Trading Layout Components
+function EnhancedTradingHeader({ tradingMode, selectedPair, onPairChange }: { 
+  tradingMode: 'spot' | 'futures';
+  selectedPair: string;
+  onPairChange: (pair: string) => void;
+}) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
+  const tradingPairs = [
+    { symbol: "BTC/USDC", name: "Bitcoin", icon: "₿", color: "text-[#f7931a]" },
+    { symbol: "ETH/USDC", name: "Ethereum", icon: "Ξ", color: "text-[#627eea]" },
+    { symbol: "SOL/USDC", name: "Solana", icon: "◎", color: "text-[#9945ff]" },
+    { symbol: "ARB/USDC", name: "Arbitrum", icon: "⟠", color: "text-[#28a0f0]" },
+    { symbol: "AVAX/USDC", name: "Avalanche", icon: "🔺", color: "text-[#e84142]" },
+  ];
+
+  const futuresPairs = [
+    { symbol: "BTC-PERP", name: "Bitcoin Perpetual", icon: "₿", color: "text-[#f7931a]" },
+    { symbol: "ETH-PERP", name: "Ethereum Perpetual", icon: "Ξ", color: "text-[#627eea]" },
+    { symbol: "SOL-PERP", name: "Solana Perpetual", icon: "◎", color: "text-[#9945ff]" },
+    { symbol: "ARB-PERP", name: "Arbitrum Perpetual", icon: "⟠", color: "text-[#28a0f0]" },
+    { symbol: "AVAX-PERP", name: "Avalanche Perpetual", icon: "🔺", color: "text-[#e84142]" },
+  ];
+
+  const availablePairs = tradingMode === 'futures' ? futuresPairs : tradingPairs;
+  const currentPair = availablePairs.find(p => p.symbol === selectedPair) || availablePairs[0];
+
+  return (
+    <div className="bg-[#0b0e11] border border-slate-800 rounded-lg p-4">
+      <div className="flex items-center justify-between">
+        {/* Pair Selector */}
+        <div className="relative">
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className="flex items-center space-x-3 px-4 py-2 bg-[#1a1d24] rounded-lg border border-slate-700 hover:bg-slate-800 transition-colors"
+          >
+            <span className={`text-2xl ${currentPair.color}`}>{currentPair.icon}</span>
+            <div>
+              <div className="font-semibold text-white">{currentPair.name}</div>
+              <div className="text-sm text-[#a1a1a1]">{currentPair.symbol}</div>
+            </div>
+            <ChevronDown className="w-4 h-4 text-[#e5e5e5]" />
+          </button>
+          
+          {isDropdownOpen && (
+            <div className="absolute top-full left-0 mt-2 w-64 bg-[#0b0e11] border border-slate-800 rounded-lg shadow-xl z-50">
+              {availablePairs.map((pair) => (
+                <button
+                  key={pair.symbol}
+                  onClick={() => {
+                    onPairChange(pair.symbol);
+                    setIsDropdownOpen(false);
+                  }}
+                  className="flex items-center space-x-3 w-full px-4 py-3 hover:bg-[#1a1d24] transition-colors first:rounded-t-lg last:rounded-b-lg text-left"
+                >
+                  <span className={`text-xl ${pair.color}`}>{pair.icon}</span>
+                  <div>
+                    <div className="font-medium text-white">{pair.name}</div>
+                    <div className="text-sm text-[#a1a1a1]">{pair.symbol}</div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Market Metrics */}
+        <div className="flex items-center space-x-8">
+          <div className="text-center">
+            <div className="text-xs text-[#a1a1a1] font-medium">Mark Price</div>
+            <div className="font-bold text-[#e5e5e5]">$43,250.50</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-[#a1a1a1] font-medium">24h Change</div>
+            <div className="font-bold text-[#16c784] flex items-center">
+              <TrendingUp className="w-4 h-4 mr-1" />+2.45%
+            </div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-[#a1a1a1] font-medium">24h Volume</div>
+            <div className="font-bold text-[#e5e5e5]">$1.2B</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-[#a1a1a1] font-medium">Open Interest</div>
+            <div className="font-bold text-[#e5e5e5]">$850M</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChartToolsSidebar() {
+  const [activeTool, setActiveTool] = useState('candlestick');
+  
+  const tools = [
+    { id: 'candlestick', icon: '📊', name: 'Candlestick' },
+    { id: 'line', icon: '📈', name: 'Line' },
+    { id: 'area', icon: '🏔️', name: 'Area' },
+    { id: 'drawing', icon: '✏️', name: 'Drawing' },
+    { id: 'indicators', icon: '📉', name: 'Indicators' },
+    { id: 'fullscreen', icon: '⛶', name: 'Fullscreen' },
+  ];
+
+  const timeframes = ['1m', '5m', '15m', '1h', '4h', '1D', '1W'];
+
+  return (
+    <Card className="glass h-full">
+      <CardContent className="p-2 h-full">
+        <div className="flex flex-col items-center space-y-2 h-full">
+          {/* Chart Type Tools */}
+          <div className="space-y-2">
+            {tools.map((tool) => (
+              <button
+                key={tool.id}
+                onClick={() => setActiveTool(tool.id)}
+                className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg transition-colors ${
+                  activeTool === tool.id 
+                    ? 'bg-blue-500/20 border border-blue-500/30' 
+                    : 'bg-slate-800/50 border border-slate-700 hover:bg-slate-800'
+                }`}
+                title={tool.name}
+              >
+                {tool.icon}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex-1" />
+
+          {/* Timeframe Buttons */}
+          <div className="space-y-1">
+            {timeframes.map((tf) => (
+              <button
+                key={tf}
+                className="w-10 h-8 rounded text-xs font-medium bg-slate-800/50 border border-slate-700 hover:bg-slate-800 transition-colors"
+              >
+                {tf}
+              </button>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EnhancedBottomTabs({ activeTab, onTabChange }: {
+  activeTab: string;
+  onTabChange: (tab: string) => void;
+}) {
+  const tabs = [
+    { id: 'positions', name: 'Positions', icon: '📍' },
+    { id: 'orders', name: 'Open Orders', icon: '📋' },
+    { id: 'history', name: 'Trade History', icon: '📈' },
+    { id: 'balances', name: 'Balances', icon: '💰' },
+    { id: 'funding', name: 'Funding History', icon: '⚡' },
+  ];
+
+  return (
+    <Card className="glass">
+      <CardContent className="p-4">
+        {/* Tab Headers */}
+        <div className="flex space-x-1 mb-4 border-b border-slate-700">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => onTabChange(tab.id)}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-blue-500/20 border border-b-0 border-blue-500/30 text-blue-400'
+                  : 'text-muted-foreground hover:text-white'
+              }`}
+            >
+              <span className="mr-2">{tab.icon}</span>
+              {tab.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div className="min-h-[200px]">
+          {activeTab === 'positions' && (
+            <div className="text-center py-8 text-muted-foreground">
+              <div className="text-4xl mb-4">📍</div>
+              <p>No open positions</p>
+            </div>
+          )}
+          {activeTab === 'orders' && (
+            <div className="text-center py-8 text-muted-foreground">
+              <div className="text-4xl mb-4">📋</div>
+              <p>No open orders</p>
+            </div>
+          )}
+          {activeTab === 'history' && (
+            <div className="text-center py-8 text-muted-foreground">
+              <div className="text-4xl mb-4">📈</div>
+              <p>No trade history</p>
+            </div>
+          )}
+          {activeTab === 'balances' && (
+            <div className="text-center py-8 text-muted-foreground">
+              <div className="text-4xl mb-4">💰</div>
+              <p>Loading balances...</p>
+            </div>
+          )}
+          {activeTab === 'funding' && (
+            <div className="text-center py-8 text-muted-foreground">
+              <div className="text-4xl mb-4">⚡</div>
+              <p>No funding history</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function Trading() {
   const [showRiskBanner, setShowRiskBanner] = useState(true);
@@ -104,7 +322,7 @@ export default function Trading() {
           <p className="text-xl text-muted-foreground">Advanced tools for both beginners and professional traders</p>
         </div>
 
-        {/* Comprehensive Trading Platform */}
+        {/* Comprehensive Trading Platform - Remove max-width constraint for trading sections */}
         <Tabs defaultValue="trading" className="w-full">
           <TabsList className="grid w-full grid-cols-4 glass text-sm">
             <TabsTrigger value="trading">Trading</TabsTrigger>
@@ -176,16 +394,6 @@ export default function Trading() {
                             <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
                             <span>Options Trading</span>
                           </div>
-                          <div
-                            className="px-3 py-2 text-sm cursor-pointer hover:bg-slate-800 flex items-center space-x-2"
-                            onClick={() => {
-                              setSelectedTradingType('p2p');
-                              setIsDropdownOpen(false);
-                            }}
-                          >
-                            <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
-                            <span>P2P Trading</span>
-                          </div>
                         </div>
                       )}
                     </div>
@@ -204,7 +412,7 @@ export default function Trading() {
                 </CardContent>
               </Card>
 
-            {/* 🆕 MODIFIED: Spot Trading now uses Hyperliquid */}
+            {/* 🆕 NEW: Spot Trading Layout - Professional 3:1 Ratio with QuickTrade Below OrderBook */}
             {selectedTradingType === "spot" && (
               <>
                 {/* Live Market Data Overview */}
@@ -231,39 +439,59 @@ export default function Trading() {
                   </div>
                 </div>
 
-                {/* Main Spot Trading Interface */}
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                  <div className="lg:col-span-1">
-                    <OrderBook symbol="BTC/USDT" />
+                {/* Main Trading Area - Professional Layout - NO GRID CONSTRAINTS */}
+                <div className="space-y-4">
+                  {/* Top Section: Chart + Side Panel (Flexbox Layout) */}
+                  <div className="flex flex-col lg:flex-row gap-6">
+                    {/* Chart Section - Takes remaining space */}
+                    <div className="flex-1">
+                      <div className="glass rounded-lg border border-slate-700 overflow-hidden">
+                        <TradingChart symbol="BTC/USDT" />
+                      </div>
+                    </div>
+                    
+                    {/* Right Panel - Fixed width on desktop, full width on mobile */}
+                    <div className="w-full lg:w-80 space-y-4">
+                      {/* OrderBook Component */}
+                      <div className="glass rounded-lg border border-slate-700 overflow-hidden">
+                        <OrderBook symbol="BTC/USDT" />
+                      </div>
+                      
+                      {/* QuickTrade Panel - Hyperliquid Trading Interface */}
+                      <div className="glass rounded-lg border border-slate-700 overflow-hidden">
+                        <HyperliquidTradingPanel tradingMode="spot" />
+                      </div>
+                    </div>
                   </div>
-                  <div className="lg:col-span-3">
-                    <TradingChart symbol="BTC/USDT" />
+
+                  {/* Trading Dashboard - Account Balance, Active Orders, Hyperliquid Status */}
+                  <TradingDashboard tradingMode="spot" selectedPair="BTC/USDT" />
+
+                  {/* Analytics Sections - Flexbox Layout */}
+                  <div className="flex flex-col lg:flex-row gap-6">
+                    {/* Recent Trades */}
+                    <div className="flex-1 glass rounded-lg border border-slate-700 overflow-hidden">
+                      <RecentTrades symbol="BTC/USDT" />
+                    </div>
+                    
+                    {/* Portfolio Overview */}
+                    <div className="flex-1 glass rounded-lg border border-slate-700 overflow-hidden">
+                      <PortfolioOverview />
+                    </div>
+                    
+                    {/* AI Trading Assistant */}
+                    <div className="flex-1 glass rounded-lg border border-slate-700 overflow-hidden">
+                      <SimpleAIChat />
+                    </div>
                   </div>
                 </div>
 
-                {/* 🆕 CHANGED: Using HyperliquidTradingPanel instead of LiveTradingPanel */}
-                <div className="mb-6">
-                  <HyperliquidTradingPanel tradingMode="spot" />
-                </div>
-
-                {/* Spot Trading Analytics & Tools */}
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                  <RecentTrades symbol="BTC/USDT" />
-                  <PortfolioOverview />
-                  <PortfolioQuickActions />
-                  <div className="min-h-[600px]">
-                    <SimpleAIChat />
-                  </div>
-                </div>
-
-                {/* Crypto Emotion Tracker */}
-                <CryptoEmotionTracker />
               </>
             )}
 
-            {/* 🆕 MODIFIED: Futures Trading now uses Hyperliquid */}
+            {/* 🆕 NEW: Futures Trading Layout - Professional 3:1 Ratio with QuickTrade Below OrderBook */}
             {selectedTradingType === "futures" && (
-              <div className="space-y-6">
+              <>
                 {/* Hyperliquid Futures Header */}
                 <Card className="glass">
                   <CardContent className="p-6">
@@ -288,57 +516,89 @@ export default function Trading() {
                   </CardContent>
                 </Card>
 
-                {/* Futures Chart and Trading */}
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                  <div className="lg:col-span-1">
-                    <OrderBook symbol="BTC-PERP" />
+                {/* Main Trading Area - Professional Layout - NO GRID CONSTRAINTS */}
+                <div className="space-y-4">
+                  {/* Top Section: Chart + Side Panel (Flexbox Layout) */}
+                  <div className="flex flex-col lg:flex-row gap-6">
+                    {/* Chart Section - Takes remaining space */}
+                    <div className="flex-1">
+                      <TradingChart symbol="BTC-PERP" />
+                    </div>
+                    
+                    {/* Right Panel - Fixed width on desktop, full width on mobile */}
+                    <div className="w-full lg:w-80 space-y-4">
+                      {/* OrderBook Component */}
+                      <div className="glass rounded-lg border border-slate-700 overflow-hidden">
+                        <OrderBook symbol="BTC-PERP" />
+                      </div>
+                      
+                      {/* QuickTrade Panel - Hyperliquid Trading Interface */}
+                      <div className="glass rounded-lg border border-slate-700 overflow-hidden">
+                        <HyperliquidTradingPanel tradingMode="futures" />
+                      </div>
+                    </div>
                   </div>
-                  <div className="lg:col-span-3">
-                    <TradingChart symbol="BTC/USDT" />
+
+                  {/* Trading Dashboard - Account Balance, Active Orders, Hyperliquid Status */}
+                  <TradingDashboard tradingMode="futures" selectedPair="BTC-PERP" />
+
+                  {/* Analytics Sections - Flexbox Layout */}
+                  <div className="flex flex-col lg:flex-row gap-6">
+                    {/* Recent Trades */}
+                    <div className="flex-1 glass rounded-lg border border-slate-700 overflow-hidden">
+                      <RecentTrades symbol="BTC-PERP" />
+                    </div>
+                    
+                    {/* Portfolio Overview */}
+                    <div className="flex-1 glass rounded-lg border border-slate-700 overflow-hidden">
+                      <PortfolioOverview />
+                    </div>
+                    
+                    {/* Portfolio Quick Actions */}
+                    <div className="flex-1 glass rounded-lg border border-slate-700 overflow-hidden">
+                      <PortfolioQuickActions />
+                    </div>
                   </div>
                 </div>
 
-                {/* 🆕 NEW: Hyperliquid Futures Trading Panel */}
-                <div className="mb-6">
-                  <HyperliquidTradingPanel tradingMode="futures" />
-                </div>
-
-                {/* Futures Analytics */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <RecentTrades symbol="BTC-PERP" />
-                  <PortfolioOverview />
-                  <PortfolioQuickActions />
-                </div>
-              </div>
+              </>
             )}
 
             {selectedTradingType === "options" && (
               <div className="space-y-6">
                 <Card className="glass">
-                  <CardContent className="p-8 text-center">
-                    <h3 className="text-2xl font-bold text-white mb-4">Options Trading</h3>
-                    <p className="text-gray-300 mb-6">Advanced options strategies with customizable strikes and expiries</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
-                        <h4 className="text-lg font-semibold text-purple-400 mb-2">Call & Put Options</h4>
-                        <p className="text-gray-400 text-sm">Buy and sell European & American style options</p>
+                  <CardContent className="p-12 text-center">
+                    <div className="mb-6">
+                      <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span className="text-3xl font-bold text-white">🚀</span>
                       </div>
-                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                        <h4 className="text-lg font-semibold text-green-400 mb-2">Options Strategies</h4>
-                        <p className="text-gray-400 text-sm">Spreads, straddles, and complex strategies</p>
+                      <h3 className="text-3xl font-bold text-white mb-4">Options Trading</h3>
+                      <div className="inline-flex items-center px-4 py-2 bg-yellow-500/20 border border-yellow-500/30 rounded-full mb-4">
+                        <span className="text-yellow-400 font-semibold">Coming Soon</span>
+                      </div>
+                      <p className="text-gray-300 text-lg mb-6 max-w-2xl mx-auto">
+                        Advanced options strategies with customizable strikes and expiries are currently under development. 
+                        We're building a comprehensive options trading platform with professional-grade tools.
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                        <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                          <h4 className="text-lg font-semibold text-purple-400 mb-2">Call & Put Options</h4>
+                          <p className="text-gray-400 text-sm">European & American style options</p>
+                        </div>
+                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                          <h4 className="text-lg font-semibold text-green-400 mb-2">Options Strategies</h4>
+                          <p className="text-gray-400 text-sm">Spreads, straddles, and complex strategies</p>
+                        </div>
                       </div>
                     </div>
-                    <Button className="mt-6 bg-gradient-to-r from-purple-600 to-green-600">
-                      Launch Options Platform
-                    </Button>
+                    <div className="text-center">
+                      <p className="text-sm text-gray-400 mb-4">Stay tuned for updates!</p>
+                      <Button className="bg-gradient-to-r from-purple-600 to-green-600" disabled>
+                        Launch Options Platform
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
-              </div>
-            )}
-
-            {selectedTradingType === "p2p" && (
-              <div className="space-y-6">
-                <P2PTrading />
               </div>
             )}
             </ProtectedTradingWrapper>

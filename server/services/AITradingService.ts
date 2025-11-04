@@ -1,9 +1,13 @@
-import OpenAI from 'openai';
+import Groq from 'groq-sdk';
 import { db } from '../db';
 import { eq, desc, and, gte } from 'drizzle-orm';
+import { hyperliquidMarketDataService } from './hyperliquid-market-data';
+import { marketDataService } from './market-data';
+import dotenv from "dotenv"
+dotenv.config()
 
-// the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Use Groq instead of OpenAI - Groq provides faster inference with Llama models
+const groq = new Groq({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface TradingSignal {
   id: string;
@@ -63,18 +67,25 @@ class AITradingService {
   // AI Trading Signals Generation
   async generateTradingSignal(symbol: string, marketData: any): Promise<TradingSignal> {
     try {
+      // Enhance with real-time price data if available
+      const enhancedMarketData = await this.enhanceMarketDataWithRealTimePrices(symbol, marketData);
+      
       const prompt = `
         Analyze the following cryptocurrency market data for ${symbol} and provide a professional trading signal:
         
-        Market Data:
-        - Current Price: $${marketData.price}
-        - 24h Change: ${marketData.change24h}%
-        - Volume: $${marketData.volume}
-        - RSI: ${marketData.rsi}
-        - MACD: ${marketData.macd}
-        - Moving Averages: MA20: ${marketData.ma20}, MA50: ${marketData.ma50}
-        - Support/Resistance: Support: ${marketData.support}, Resistance: ${marketData.resistance}
-        - Market Cap: $${marketData.marketCap}
+        REAL-TIME MARKET DATA (Current as of ${enhancedMarketData.enhancedAt || new Date().toISOString()}):
+        - Current Price: $${enhancedMarketData.price}
+        - 24h Change: ${enhancedMarketData.change24h}%
+        - Volume: $${enhancedMarketData.volume}
+        - 24h High: $${enhancedMarketData.high24h}
+        - 24h Low: $${enhancedMarketData.low24h}
+        - Market Cap: $${enhancedMarketData.marketCap}
+        
+        TECHNICAL INDICATORS:
+        - RSI: ${enhancedMarketData.rsi || 'N/A'}
+        - MACD: ${enhancedMarketData.macd || 'N/A'}
+        - Moving Averages: MA20: ${enhancedMarketData.ma20 || 'N/A'}, MA50: ${enhancedMarketData.ma50 || 'N/A'}
+        - Support/Resistance: Support: ${enhancedMarketData.support || 'N/A'}, Resistance: ${enhancedMarketData.resistance || 'N/A'}
         
         Provide a JSON response with:
         - action: 'buy', 'sell', or 'hold'
@@ -82,12 +93,15 @@ class AITradingService {
         - price_target: expected price target
         - stop_loss: recommended stop loss level
         - time_horizon: 'short' (minutes), 'medium' (hours), 'long' (days)
-        - reasoning: detailed explanation of the signal
+        - reasoning: detailed explanation of the signal based on current market conditions
         - technical_indicators: analysis of each indicator
+        - current_market_context: brief assessment of current market sentiment
+        
+        IMPORTANT: Base your analysis on the CURRENT real-time market data provided above. Do not use outdated or hypothetical prices.
       `;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const response = await groq.chat.completions.create({
+        model: "groq/compound",
         messages: [
           {
             role: "system",
@@ -148,8 +162,8 @@ class AITradingService {
         - predictions: {short_term, medium_term, long_term} outlook
       `;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const response = await groq.chat.completions.create({
+        model: "groq/compound",
         messages: [
           {
             role: "system",
@@ -214,8 +228,8 @@ class AITradingService {
         - actions: array of specific buy/sell/rebalance actions
       `;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const response = await groq.chat.completions.create({
+        model: "groq/compound",
         messages: [
           {
             role: "system",
@@ -277,8 +291,8 @@ class AITradingService {
         "Alert me when BTC drops below $45000" -> {action: 'set_alert', symbol: 'BTCUSDT', conditions: {price_below: 45000}}
       `;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const response = await groq.chat.completions.create({
+        model: "groq/compound",
         messages: [
           {
             role: "system",
@@ -351,8 +365,8 @@ class AITradingService {
         - reasoning: explanation of strategy choice
       `;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const response = await groq.chat.completions.create({
+        model: "groq/compound",
         messages: [
           {
             role: "system",
@@ -411,8 +425,8 @@ class AITradingService {
         - max_loss_estimate: estimated maximum potential loss
       `;
 
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+      const response = await groq.chat.completions.create({
+        model: "groq/compound",
         messages: [
           {
             role: "system",
@@ -450,6 +464,62 @@ class AITradingService {
       console.log('[AITradingService] Market analysis completed:', analysis.id);
     } catch (error) {
       console.error('[AITradingService] Failed to store market analysis:', error);
+    }
+  }
+
+  // Helper method to enhance market data with real-time prices
+  private async enhanceMarketDataWithRealTimePrices(symbol: string, marketData: any): Promise<any> {
+    try {
+      // Get current real-time price data
+      const currentMarketData = await marketDataService.getMarketDataBySymbol(symbol);
+      const realTimePrice = await hyperliquidMarketDataService.getCurrentPrice(symbol);
+      
+      if (!currentMarketData && !realTimePrice) {
+        console.warn(`[AITradingService] No real-time data available for ${symbol}, using provided data`);
+        return {
+          ...marketData,
+          dataSource: 'provided-only',
+          enhancedAt: new Date().toISOString()
+        };
+      }
+
+      // Merge provided data with real-time data, prioritizing real-time prices
+      const enhancedData = {
+        ...marketData,
+        price: realTimePrice ? parseFloat(realTimePrice) : parseFloat(currentMarketData?.price || marketData.price),
+        change24h: currentMarketData?.change24h ? parseFloat(currentMarketData.change24h) : marketData.change24h,
+        volume: currentMarketData?.volume24h ? parseFloat(currentMarketData.volume24h) : marketData.volume,
+        high24h: currentMarketData?.high24h ? parseFloat(currentMarketData.high24h) : marketData.high24h,
+        low24h: currentMarketData?.low24h ? parseFloat(currentMarketData.low24h) : marketData.low24h,
+        marketCap: currentMarketData?.marketCap ? parseFloat(currentMarketData.marketCap) : marketData.marketCap,
+        // Keep technical indicators from provided data if available
+        rsi: marketData.rsi,
+        macd: marketData.macd,
+        ma20: marketData.ma20,
+        ma50: marketData.ma50,
+        support: marketData.support,
+        resistance: marketData.resistance,
+        // Add metadata
+        dataSource: 'real-time-enhanced',
+        enhancedAt: new Date().toISOString()
+      };
+
+      console.log(`[AITradingService] Enhanced market data for ${symbol}:`, {
+        originalPrice: marketData.price,
+        realTimePrice: realTimePrice,
+        enhancedPrice: enhancedData.price,
+        priceDifference: realTimePrice ? Math.abs(parseFloat(realTimePrice) - marketData.price) : 0
+      });
+
+      return enhancedData;
+    } catch (error) {
+      console.error(`[AITradingService] Error enhancing market data for ${symbol}:`, error);
+      // Fallback to provided data if enhancement fails
+      return {
+        ...marketData,
+        dataSource: 'provided-fallback',
+        enhancedAt: new Date().toISOString()
+      };
     }
   }
 

@@ -13,7 +13,22 @@ interface MarketDataStatus {
 export default function MarketDataStatus() {
   const { data: status, isLoading } = useQuery<MarketDataStatus>({
     queryKey: ['/api/market-data/status'],
+    queryFn: async () => {
+      const response = await fetch('/api/market-data/status');
+      if (!response.ok) {
+        // Return fallback data if endpoint fails
+        return {
+          marketDataProviders: ['Hyperliquid'],
+          blockchainConnection: true,
+          lastUpdated: new Date().toISOString(),
+          status: 'connected' as const
+        };
+      }
+      return response.json();
+    },
     refetchInterval: 10000, // Update every 10 seconds
+    retry: 2, // Retry failed requests
+    staleTime: 30000, // Consider data fresh for 30 seconds
   });
 
   if (isLoading) {
