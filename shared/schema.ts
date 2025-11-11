@@ -1443,3 +1443,36 @@ export type InsertEducationConsent = z.infer<typeof insertEducationConsentSchema
 
 // Re-export AI schema tables and types for AI trading functionality
 export * from "./ai-schema";
+
+// Import and export alt5Accounts from fx_swap_schema
+// ALT5 Accounts - Track user ALT5 trading accounts
+export const alt5Accounts = pgTable(
+  "alt5_accounts",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 36 })
+      .references(() => users.id)
+      .notNull(),
+    alt5AccountId: varchar("alt5_account_id", { length: 255 }).notNull().unique(),
+    alt5UserId: varchar("alt5_user_id", { length: 255 }).notNull(),
+    masterAccount: boolean("master_account").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_alt5_accounts_user").on(table.userId),
+    index("idx_alt5_accounts_alt5_id").on(table.alt5AccountId),
+    index("idx_alt5_accounts_master").on(table.masterAccount),
+  ]
+);
+
+// Type exports for alt5Accounts
+export type Alt5Account = typeof alt5Accounts.$inferSelect;
+export type InsertAlt5Account = typeof alt5Accounts.$inferInsert;
+
+// Insert schema for alt5Accounts
+export const insertAlt5AccountSchema = createInsertSchema(alt5Accounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});

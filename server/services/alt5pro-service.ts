@@ -478,8 +478,8 @@ export class Alt5ProService {
 
 // Export singleton instance
 export const alt5ProService = new Alt5ProService({
-  email: process.env.ALT5_EMAIL || process.env.ALT5_PRO_EMAIL || '',
-  password: process.env.ALT5_PASSWORD || process.env.ALT5_PRO_PASSWORD || '',
+  email: process.env.ALT5_PAY_EMAIL || process.env.ALT5_PRO_EMAIL || '',
+  password: process.env.ALT5_PAY_PASSWORD || process.env.ALT5_PRO_PASSWORD || '',
   accountId: process.env.ALT5_PRO_ACCOUNT_ID,
   environment: (process.env.ALT5_PRO_ENVIRONMENT as 'production' | 'sandbox') || 'sandbox'
 });

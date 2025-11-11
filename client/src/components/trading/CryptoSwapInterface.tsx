@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useWalletAuth } from '@/hooks/useWalletAuth';
+import { useWalletBalance } from '@/hooks/useWalletBalance';
 import { 
-  getSwapQuote, 
+ getSwapQuote, 
   getTokenPrice, 
   fetchTokenList, 
   searchTokens,
-  getTokensForChain,
+ getTokensForChain,
   type Token, 
-  type SwapQuote 
+  type SwapQuote,
+  approveToken
 } from '@/lib/zeroXServices';
+import { ethers } from 'ethers';
 import { SUPPORTED_CHAINS, getChainById } from '@/lib/chains';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,11 +20,11 @@ import { Label } from '@/components/ui/label';
 import { 
   ArrowDownUp, 
   Loader2, 
-  AlertCircle, 
-  Settings,
-  ChevronDown,
+ AlertCircle, 
+ ChevronDown,
   Search,
-  X
+  X,
+  Sparkles
 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -30,9 +33,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import SwapSuccessPopup from './SwapSuccessPopup';
 
 export default function CryptoSwapInterface() {
   const { walletAddress, isAuthenticated, chainId } = useWalletAuth();
+  const { balances, totalUsdValue, isLoading: isLoadingBalances, error: balanceError } = useWalletBalance();
   
   // Token lists
   const [allTokens, setAllTokens] = useState<Token[]>([]);
@@ -46,6 +56,7 @@ export default function CryptoSwapInterface() {
   const [isTokenPickerOpen, setIsTokenPickerOpen] = useState(false);
   const [tokenPickerMode, setTokenPickerMode] = useState<'sell' | 'buy'>('sell');
   const [tokenSearchQuery, setTokenSearchQuery] = useState('');
+  const [showGaslessOnly, setShowGaslessOnly] = useState(false);
   
   const currentChain = getChainById(chainId);
   
@@ -94,17 +105,18 @@ export default function CryptoSwapInterface() {
   // UI state
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
   const [isSwapping, setIsSwapping] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quote, setQuote] = useState<SwapQuote | null>(null);
   const [priceImpact, setPriceImpact] = useState<string>('0');
   const [slippage, setSlippage] = useState<string>('0.5');
 
-  // TX Settings
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [customSlippage, setCustomSlippage] = useState<string>('');
-  const [deadline, setDeadline] = useState<string>('20'); // minutes
-  const [expertMode, setExpertMode] = useState(false);
-  const [autoRouter, setAutoRouter] = useState(true);
+
+
+  // Swap success popup
+  const [isSwapSuccessOpen, setIsSwapSuccessOpen] = useState(false);
+  const [swapTxHash, setSwapTxHash] = useState('');
+  const [swapExplorerUrl, setSwapExplorerUrl] = useState('');
 
   const isChainSupported = SUPPORTED_CHAINS[chainId] !== undefined;
 
@@ -222,8 +234,75 @@ export default function CryptoSwapInterface() {
     }
   };
 
-  // Execute swap
-  const handleSwap = async () => {
+  // Handle token approval
+  const handleApprove = async () => {
+    if (!isAuthenticated || !walletAddress || !sellToken || !quote) {
+      setError('Please connect wallet and ensure tokens are selected');
+      return;
+    }
+
+    if (!quote.issues?.allowance) {
+      setError('No approval needed for this transaction');
+      return;
+    }
+
+    setIsApproving(true);
+    setError(null);
+
+    try {
+      // Get the provider and signer from the user's wallet
+      if (!window.ethereum) {
+        throw new Error('Ethereum wallet not found');
+      }
+
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+
+      // Get the spender address from the quote issues
+      const spenderAddress = quote.issues.allowance.spender;
+      const tokenAddress = sellToken.address;
+      
+      // Use MAX_UINT256 for unlimited approval
+      const MAX_UINT256 = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+
+      // Call the approveToken function
+      const txHash = await approveToken(
+        tokenAddress,
+        spenderAddress,
+        MAX_UINT256,
+        signer
+      );
+
+      console.log('Approval successful:', txHash);
+      setError('Token approved successfully! You can now proceed with the swap.');
+      
+      // Optionally refetch the quote to update allowance status
+      if (sellAmount && parseFloat(sellAmount) > 0) {
+        const sellAmountWei = (parseFloat(sellAmount) * Math.pow(10, sellToken.decimals)).toString();
+        const updatedQuote = await getSwapQuote(
+          sellToken.address,
+          buyToken!.address,
+          sellAmountWei,
+          walletAddress,
+          chainId
+        );
+        setQuote(updatedQuote);
+        
+        // Clear error if allowance is now sufficient
+        if (!updatedQuote.issues?.allowance) {
+          setError(null);
+        }
+      }
+    } catch (err: any) {
+      console.error('Approval error:', err);
+      setError(err.message || 'Failed to approve token');
+    } finally {
+      setIsApproving(false);
+    }
+ };
+
+  // Execute gasless swap
+ const handleSwap = async () => {
     if (!isAuthenticated || !walletAddress || !sellAmount || !sellToken || !buyToken) {
       setError('Please connect wallet and enter amount');
       return;
@@ -248,6 +327,9 @@ export default function CryptoSwapInterface() {
         chainId
       );
       
+      // Log the received swap quote for debugging
+      console.log('Received swap quote from backend:', swapQuote);
+      
       setQuote(swapQuote);
 
       if (swapQuote.issues?.allowance) {
@@ -255,15 +337,95 @@ export default function CryptoSwapInterface() {
         return;
       }
 
-      if (window.ethereum) {
+      if (swapQuote.trade?.eip712 && window.ethereum) {
+        // Handle gasless transaction with EIP-712 signing
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+
+        try {
+          let approvalSignature = null;
+          let tradeSignature = null;
+
+          // Sign approval if present
+          if (swapQuote.approval?.eip712) {
+            const { domain: approvalDomain, types: approvalTypes, message: approvalMessage } = swapQuote.approval.eip712;
+            const filteredApprovalTypes = { ...approvalTypes };
+            delete filteredApprovalTypes.EIP712Domain;
+
+            console.log('Approval EIP-712 Signing Inputs:');
+            console.log('  Domain:', JSON.stringify(approvalDomain, null, 2));
+            console.log('  Filtered Types:', JSON.stringify(filteredApprovalTypes, null, 2));
+            console.log('  Message:', JSON.stringify(approvalMessage, null, 2));
+
+            approvalSignature = await signer.signTypedData(approvalDomain, filteredApprovalTypes, approvalMessage);
+            console.log('Approval signature:', approvalSignature);
+          }
+
+          // Sign trade
+          const { domain: tradeDomain, types: tradeTypes, message: tradeMessage } = swapQuote.trade.eip712;
+          const filteredTradeTypes = { ...tradeTypes };
+          delete filteredTradeTypes.EIP712Domain;
+
+          console.log('Trade EIP-712 Signing Inputs:');
+          console.log('  Domain:', JSON.stringify(tradeDomain, null, 2));
+          console.log('  Filtered Types:', JSON.stringify(filteredTradeTypes, null, 2));
+          console.log('  Message:', JSON.stringify(tradeMessage, null, 2));
+
+          tradeSignature = await signer.signTypedData(tradeDomain, filteredTradeTypes, tradeMessage);
+          console.log('Trade signature:', tradeSignature);
+
+          // Submit the signed metatransactions to backend
+          const submitResponse = await fetch('/api/0x/gasless-submit', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              trade_type: swapQuote.trade?.type,
+              trade_eip712: swapQuote.trade?.eip712,
+              trade_signature: tradeSignature,
+              ...(swapQuote.approval && {
+                approval_type: swapQuote.approval?.type,
+                approval_eip712: swapQuote.approval?.eip712,
+                approval_signature: approvalSignature,
+              }),
+              chain_id: chainId
+            }),
+          });
+
+          if (!submitResponse.ok) {
+            const error = await submitResponse.json();
+            throw new Error(error.reason || error.error || 'Failed to submit gasless transaction');
+          }
+
+          const result = await submitResponse.json();
+
+          // Show success message with transaction hash if available
+          const txHash = result.tradeHash || result.hash || result.txHash || 'unknown';
+          const explorerUrl = `${currentChain?.blockExplorer}/tx/${txHash}`;
+          
+          setSwapTxHash(txHash);
+          setSwapExplorerUrl(explorerUrl);
+          setIsSwapSuccessOpen(true);
+
+          setSellAmount('');
+          setBuyAmount('');
+          setQuote(null);
+
+        } catch (signError: any) {
+          console.error('EIP-712 signing error:', signError);
+          setError(signError.message || 'Failed to sign gasless transaction');
+        }
+      } else if (swapQuote.transaction && window.ethereum) {
+        // Fallback to regular transaction if no gasless trade is present
         const txHash = await window.ethereum.request({
           method: 'eth_sendTransaction',
           params: [{
             from: walletAddress,
-            to: swapQuote.transaction?.to,
-            data: swapQuote.transaction?.data,
-            value: swapQuote.transaction?.value || '0x0',
-            gas: swapQuote.transaction?.gas,
+            to: swapQuote.transaction.to,
+            data: swapQuote.transaction.data,
+            value: swapQuote.transaction.value || '0x0',
+            gas: swapQuote.transaction.gas,
           }],
         });
 
@@ -273,6 +435,9 @@ export default function CryptoSwapInterface() {
         setSellAmount('');
         setBuyAmount('');
         setQuote(null);
+      } else {
+        console.error('Swap quote received but no valid transaction data:', swapQuote);
+        setError('No valid transaction data received from 0x API');
       }
     } catch (err: any) {
       console.error('Swap error:', err);
@@ -282,7 +447,8 @@ export default function CryptoSwapInterface() {
     }
   };
 
-  const filteredTokens = searchTokens(allTokens, tokenSearchQuery);
+  const filteredTokens = searchTokens(allTokens, tokenSearchQuery)
+    .filter(token => !showGaslessOnly || token.supportsGasless);
 
   return (
     <>
@@ -293,13 +459,7 @@ export default function CryptoSwapInterface() {
               <ArrowDownUp className="w-5 h-5 text-purple-400" />
               Crypto Swap
             </CardTitle>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="h-8 w-8"
-              onClick={() => setIsSettingsOpen(true)}>
-              <Settings className="w-4 h-4" />
-            </Button>
+
           </div>
           
           {/* Network indicator */}
@@ -363,30 +523,50 @@ export default function CryptoSwapInterface() {
                 disabled={!isChainSupported || !sellToken}
               />
               
-              <Button
-                variant="outline"
-                onClick={() => openTokenPicker('sell')}
-                disabled={!isChainSupported}
-                className="h-10 px-3 bg-slate-700/50 hover:bg-slate-700 border-slate-600"
-              >
-                {sellToken ? (
-                  <div className="flex items-center gap-2">
-                    {sellToken.logoURI && (
-                      <img src={sellToken.logoURI} alt={sellToken.symbol} className="w-5 h-5 rounded-full" />
-                    )}
-                    <span className="font-semibold">{sellToken.symbol}</span>
-                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                ) : (
-                  <span>Select</span>
-                )}
-              </Button>
+        <Button
+          variant="outline"
+          onClick={() => openTokenPicker('sell')}
+          disabled={!isChainSupported}
+          className="h-10 px-3 bg-slate-700/50 hover:bg-slate-700 border-slate-600 relative" // Added 'relative' for positioning gasless indicator
+        >
+          {sellToken ? (
+            <div className="flex items-center gap-2">
+              {sellToken.logoURI && (
+                <img src={sellToken.logoURI} alt={sellToken.symbol} className="w-5 h-5 rounded-full" />
+              )}
+              <span className="font-semibold">{sellToken.symbol}</span>
+              {/* Gasless Swap Indicator */}
+              {sellToken.supportsGasless && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded text-xs cursor-help">
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      Gasless
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Swap without paying gas fees. The platform covers your gas costs.</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            </div>
+          ) : (
+            <span>Select</span>
+          )}
+        </Button>
             </div>
             
             {sellToken && (
               <div className="flex justify-between items-center mt-2 text-xs text-muted-foreground">
                 <span>~$0.00</span>
-                <span>Balance: 0.00</span>
+                <span>
+                  Balance: {
+                    isLoadingBalances
+                      ? 'Loading...'
+                      : balances.find(b => b.address.toLowerCase() === sellToken.address.toLowerCase())?.balanceFormatted || '0.00'
+                  } {sellToken.symbol}
+                </span>
               </div>
             )}
           </div>
@@ -420,7 +600,7 @@ export default function CryptoSwapInterface() {
                 variant="outline"
                 onClick={() => openTokenPicker('buy')}
                 disabled={!isChainSupported}
-                className="h-10 px-3 bg-slate-700/50 hover:bg-slate-700 border-slate-600"
+                className="h-10 px-3 bg-slate-700/50 hover:bg-slate-700 border-slate-600 relative" // Added 'relative' for positioning gasless indicator
               >
                 {buyToken ? (
                   <div className="flex items-center gap-2">
@@ -428,6 +608,20 @@ export default function CryptoSwapInterface() {
                       <img src={buyToken.logoURI} alt={buyToken.symbol} className="w-5 h-5 rounded-full" />
                     )}
                     <span className="font-semibold">{buyToken.symbol}</span>
+                    {/* Gasless Swap Indicator */}
+                    {buyToken.supportsGasless && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded text-xs cursor-help">
+                            <Sparkles className="w-3 h-3 mr-1" />
+                            Gasless
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Swap without paying gas fees. The platform covers your gas costs.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
                     <ChevronDown className="w-4 h-4 text-muted-foreground" />
                   </div>
                 ) : (
@@ -466,16 +660,7 @@ export default function CryptoSwapInterface() {
                 <span className="text-muted-foreground">Max Slippage</span>
                 <span className="font-medium">{slippage}%</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Deadline</span>
-                <span className="font-medium">{deadline} min</span>
-              </div>
-              {expertMode && (
-                <div className="flex items-center gap-2 text-xs text-red-400 bg-red-500/10 px-2 py-1 rounded">
-                  <AlertCircle className="w-3 h-3" />
-                  Expert Mode Active
-                </div>
-              )}
+
             </div>
           )}
 
@@ -487,33 +672,61 @@ export default function CryptoSwapInterface() {
             </Alert>
           )}
 
-          {/* Swap Button */}
-          <Button
-            onClick={handleSwap}
-            disabled={!isAuthenticated || !sellAmount || isSwapping || isLoadingQuote || !isChainSupported || !sellToken || !buyToken}
-            className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-            size="lg"
-          >
-            {isSwapping ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Swapping...
-              </>
-            ) : isLoadingQuote ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Getting Quote...
-              </>
-            ) : !isAuthenticated ? (
-              'Connect Wallet'
-            ) : !isChainSupported ? (
-              'Unsupported Network'
-            ) : !sellToken || !buyToken ? (
-              'Select Tokens'
-            ) : (
-              'Swap'
-            )}
-          </Button>
+          {/* Approval and Swap Buttons */}
+          {quote?.issues?.allowance ? (
+            <>
+              <Button
+                onClick={handleApprove}
+                disabled={!isAuthenticated || isApproving || isLoadingQuote || !isChainSupported || !sellToken || !buyToken}
+                className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+                size="lg"
+              >
+                {isApproving ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Approving...
+                  </>
+                ) : (
+                  'Approve Token'
+                )}
+              </Button>
+              <Button
+                onClick={handleSwap}
+                disabled={true}
+                className="w-full h-14 text-lg font-semibold bg-gray-600 cursor-not-allowed opacity-50"
+                size="lg"
+              >
+                Swap (Approval Required)
+              </Button>
+            </>
+          ) : (
+            <Button
+              onClick={handleSwap}
+              disabled={!isAuthenticated || !sellAmount || isSwapping || isLoadingQuote || !isChainSupported || !sellToken || !buyToken}
+              className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              size="lg"
+            >
+              {isSwapping ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Swapping...
+                </>
+              ) : isLoadingQuote ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Getting Quote...
+                </>
+              ) : !isAuthenticated ? (
+                'Connect Wallet'
+              ) : !isChainSupported ? (
+                'Unsupported Network'
+              ) : !sellToken || !buyToken ? (
+                'Select Tokens'
+              ) : (
+                'Swap'
+              )}
+            </Button>
+          )}
 
           {/* Powered by */}
           <div className="text-center text-xs text-muted-foreground pt-2">
@@ -549,6 +762,20 @@ export default function CryptoSwapInterface() {
                     <X className="w-4 h-4" />
                   </Button>
                 )}
+              </div>
+            </div>
+            <div className="px-6 pb-3 border-b border-slate-700">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="gasless-filter"
+                  checked={showGaslessOnly}
+                  onChange={(e) => setShowGaslessOnly(e.target.checked)}
+                  className="w-4 h-4 text-purple-600 bg-slate-700 border-slate-600 rounded focus:ring-purple-500 focus:ring-2"
+                />
+                <label htmlFor="gasless-filter" className="text-sm text-muted-foreground">
+                  Show gasless tokens only
+                </label>
               </div>
             </div>
             <div className="h-px bg-slate-700 relative z-30"></div>
@@ -599,11 +826,24 @@ export default function CryptoSwapInterface() {
                           {token.name}
                         </div>
                       </div>
-                      {(sellToken?.address === token.address || buyToken?.address === token.address) && (
-                        <div className="flex-shrink-0">
+                      <div className="flex items-center gap-2">
+                        {token.supportsGasless && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="flex items-center bg-green-500/20 text-green-400 px-2 py-1 rounded text-xs">
+                                <Sparkles className="w-3 h-3 mr-1" />
+                                Gasless
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Swap without paying gas fees. The platform covers your gas costs.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {(sellToken?.address === token.address || buyToken?.address === token.address) && (
                           <div className="w-3 h-3 rounded-full bg-purple-500 animate-pulse"></div>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -613,22 +853,15 @@ export default function CryptoSwapInterface() {
         </DialogContent>
       </Dialog>
 
-      {/* Settings Dialog - Simplified version, full implementation would go here */}
-      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent className="sm:max-w-lg bg-slate-900 border-slate-700">
-          <DialogHeader>
-            <DialogTitle>Transaction Settings</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 p-4">
-            <p className="text-sm text-muted-foreground">
-              Settings panel - slippage, deadline, expert mode controls would go here
-            </p>
-            <Button onClick={() => setIsSettingsOpen(false)} className="w-full">
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+
+
+      {/* Swap Success Popup */}
+      <SwapSuccessPopup
+        isOpen={isSwapSuccessOpen}
+        onClose={() => setIsSwapSuccessOpen(false)}
+        txHash={swapTxHash}
+        explorerUrl={swapExplorerUrl}
+      />
     </>
   );
 }

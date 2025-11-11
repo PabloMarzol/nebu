@@ -8,8 +8,8 @@ import time
 from typing import Dict, Any, Optional
 
 load_dotenv()
-alt5_email = str(os.getenv("ALT5_EMAIL"))
-alt5_password = str(os.getenv("ALT5_PASSWORD"))
+ALT5_PAY_EMAIL = str(os.getenv("ALT5_PAY_EMAIL"))
+ALT5_PAY_PASSWORD = str(os.getenv("ALT5_PAY_PASSWORD"))
 
 class ALT5TradingAPI:
     """Simple ALT5 Trading API client for testing buy/sell capabilities"""
@@ -254,10 +254,10 @@ def test_alt5_trading():
     
     # Method 2: Try cookie-based authentication
     print("\n🍪 METHOD 2: Testing Cookie-based Authentication...")
-    print(f"📧 Using email: {alt5_email}")
+    print(f"📧 Using email: {ALT5_PAY_EMAIL}")
     
-    if alt5_email and alt5_password:
-        cookie_client = ALT5TradingAPI(email=alt5_email, password=alt5_password)
+    if ALT5_PAY_EMAIL and ALT5_PAY_PASSWORD:
+        cookie_client = ALT5TradingAPI(email=ALT5_PAY_EMAIL, password=ALT5_PAY_PASSWORD)
         
         print("\n1b. Attempting login...")
         login_result = cookie_client.login_with_credentials()
@@ -288,7 +288,7 @@ def test_alt5_trading():
     print("1. API key credentials are correct")
     print("2. Account has proper permissions")
     print("3. ALT5 API endpoints are accessible")
-    print("4. Environment variables ALT5_EMAIL and ALT5_PASSWORD are set")
+    print("4. Environment variables ALT5_PAY_EMAIL and ALT5_PAY_PASSWORD are set")
     print("=" * 50)
 
 

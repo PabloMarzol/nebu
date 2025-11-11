@@ -24,8 +24,8 @@ router.get('/config', async (req, res) => {
 
     // Check ALT5 Pro configuration
     const alt5ProConfig = {
-      email: process.env.ALT5_EMAIL ? '✅ Set' : '❌ Missing',
-      password: process.env.ALT5_PASSWORD ? '✅ Set' : '❌ Missing',
+      email: process.env.ALT5_PAY_EMAIL ? '✅ Set' : '❌ Missing',
+      password: process.env.ALT5_PAY_PASSWORD ? '✅ Set' : '❌ Missing',
       environment: process.env.ALT5_PRO_ENVIRONMENT || 'sandbox'
     };
 

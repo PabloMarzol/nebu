@@ -1,25 +1,32 @@
 import type { Address } from 'viem';
 import { getTokenAddress } from './chains';
+import { ethers } from 'ethers';
 
-const API_BASE_URL = '/api/0x';
-
-// Token list URLs per chain
-const TOKEN_LISTS: Record<number, string> = {
-  1: 'https://tokens.coingecko.com/uniswap/all.json',
-  137: 'https://api-polygon-tokens.polygon.technology/tokenlists/default.tokenlist.json',
-  42161: 'https://tokenlist.arbitrum.io/ArbTokenLists/arbed_arb_whitelist_era.json',
-  10: 'https://static.optimism.io/optimism.tokenlist.json',
-  8453: 'https://token-list.base.org',
-  56: 'https://tokens.pancakeswap.finance/pancakeswap-extended.json',
-};
-
+// Define the SwapQuote interface to match the SDK response structure
 export interface SwapQuote {
-  transaction: {
+  transaction?: {
     to: string;
     data: string;
     value: string;
     gas: string;
     gasPrice: string;
+  };
+  trade?: {
+    type: string;
+    hash: string;
+    eip712: {
+      domain: {
+        name: string;
+        version: string;
+        chainId: number;
+        verifyingContract: string;
+      };
+      types: Record<string, Array<{
+        name: string;
+        type: string;
+      }>>;
+      message: Record<string, any>;
+    };
   };
   buyAmount: string;
   sellAmount: string;
@@ -34,6 +41,16 @@ export interface SwapQuote {
   };
 }
 
+// Token list URLs per chain
+const TOKEN_LISTS: Record<number, string> = {
+  1: 'https://tokens.coingecko.com/uniswap/all.json',
+  137: 'https://api-polygon-tokens.polygon.technology/tokenlists/default.tokenlist.json',
+  42161: 'https://tokenlist.arbitrum.io/ArbTokenLists/arbed_arb_whitelist_era.json',
+  10: 'https://static.optimism.io/optimism.tokenlist.json',
+  8453: 'https://token-list.base.org',
+  56: 'https://tokens.pancakeswap.finance/pancakeswap-extended.json',
+};
+
 export interface Token {
   address: string;
   symbol: string;
@@ -41,40 +58,209 @@ export interface Token {
   decimals: number;
   logoURI?: string;
   chainId?: number;
+  supportsGasless?: boolean; // Flag to indicate gasless swap support
 }
 
 /**
- * Fetch popular tokens dynamically per chain
+ * Fetch with retry mechanism
+ */
+async function fetchWithRetry(url: string, maxRetries: number = 3): Promise<Response> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(8000), // Increased timeout
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
+
+      if (response.ok) {
+        return response;
+      }
+
+      console.warn(`Token list fetch attempt ${attempt} failed with status ${response.status}`);
+      if (attempt === maxRetries) {
+        return response;
+      }
+
+    } catch (error) {
+      console.warn(`Token list fetch attempt ${attempt} failed:`, error);
+      if (attempt === maxRetries) {
+        throw error;
+      }
+    }
+
+    // Wait before retry (exponential backoff)
+    await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+  }
+
+  throw new Error('All retry attempts failed');
+}
+
+/**
+ * Fetch gasless approval tokens for a specific chain
+ */
+async function fetchGaslessApprovalTokens(chainId: number): Promise<string[]> {
+  try {
+    // Use the backend proxy to avoid CORS issues and manage API keys securely
+    const response = await fetch(`/api/0x/gasless/gasless-approval-tokens?chainId=${chainId}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch gasless approval tokens: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Fetched gasless approval tokens for chain', chainId, ':', data.tokens);
+    return data.tokens || [];
+  } catch (error) {
+    console.error('Error fetching gasless approval tokens:', error);
+    return []; // Return empty array as fallback
+  }
+}
+
+/**
+ * Ensures main tokens (USDT, USDC, ETH) are present in token list using dynamic metadata
+ */
+async function ensureMainTokensPresent(tokens: Token[], chainId: number): Promise<Token[]> {
+  const mainSymbols = ['USDT', 'USDC', 'ETH'];
+  const tokenMap = new Map(tokens.map(t => [t.symbol.toUpperCase(), t]));
+  
+  // Check for missing main tokens
+  const missingSymbols = mainSymbols.filter(symbol => !tokenMap.has(symbol));
+  
+  if (missingSymbols.length === 0) return tokens;
+  
+  console.log('Missing main tokens for chain', chainId, ':', missingSymbols);
+  
+  // Fetch metadata for missing tokens from various sources
+  const enhancedTokens = [...tokens];
+  const tokenMetadata = await fetchTokenMetadata(missingSymbols, chainId);
+  
+  for (const symbol of missingSymbols) {
+    const metadata = tokenMetadata.find(t => t.symbol.toUpperCase() === symbol);
+    if (metadata) {
+      // Check if this token supports gasless
+      const gaslessTokens = await fetchGaslessApprovalTokens(chainId);
+      const supportsGasless = gaslessTokens.some(gaslessAddr => 
+        gaslessAddr.toLowerCase() === metadata.address.toLowerCase()
+      );
+      
+      enhancedTokens.push({
+        ...metadata,
+        chainId,
+        supportsGasless
+      });
+    }
+  }
+  
+  return enhancedTokens;
+}
+
+/**
+ * Fetches token metadata from various sources for given symbols and chain
+ */
+async function fetchTokenMetadata(symbols: string[], chainId: number): Promise<Token[]> {
+  try {
+    // Try to get token addresses from common token lists first
+    const tokenListUrl = getTokenListUrl(chainId);
+    if (tokenListUrl) {
+      const response = await fetchWithRetry(tokenListUrl);
+      if (response.ok) {
+        const data = await response.json();
+        const tokenArray = data.tokens || data;
+        
+        if (Array.isArray(tokenArray)) {
+          const foundTokens: Token[] = [];
+          const symbolsLower = symbols.map(s => s.toLowerCase());
+          
+          for (const token of tokenArray) {
+            if (token.chainId === chainId && symbolsLower.includes(token.symbol.toLowerCase())) {
+              foundTokens.push({
+                address: token.address,
+                symbol: token.symbol,
+                name: token.name,
+                decimals: token.decimals,
+                logoURI: token.logoURI || token.logoUri,
+                chainId: chainId,
+                supportsGasless: false // Will be updated later
+              });
+            }
+          }
+          
+          // If we found all symbols, return them
+          if (foundTokens.length === symbols.length) {
+            return foundTokens;
+          }
+        }
+      }
+    }
+    
+    // Fallback: Use curated tokens per chain as reference
+    const curatedTokens = getTokensForChain(chainId);
+    const foundTokens: Token[] = [];
+    
+    for (const symbol of symbols) {
+      const token = curatedTokens.find(t => t.symbol.toUpperCase() === symbol.toUpperCase());
+      if (token) {
+        foundTokens.push(token);
+      }
+    }
+    
+    return foundTokens;
+  } catch (error) {
+    console.error('Error fetching token metadata:', error);
+    return [];
+  }
+}
+
+/**
+ * Get token list URL for a specific chain
+ */
+function getTokenListUrl(chainId: number): string | undefined {
+  const TOKEN_LISTS: Record<number, string> = {
+    1: 'https://tokens.coingecko.com/uniswap/all.json',
+    137: 'https://api-polygon-tokens.polygon.technology/tokenlists/default.tokenlist.json',
+    42161: 'https://tokenlist.arbitrum.io/ArbTokenLists/arbed_arb_whitelist_era.json',
+    10: 'https://static.optimism.io/optimism.tokenlist.json',
+    8453: 'https://token-list.base.org',
+    56: 'https://tokens.pancakeswap.finance/pancakeswap-extended.json',
+  };
+  return TOKEN_LISTS[chainId];
+}
+
+/**
+ * Fetch popular tokens dynamically per chain with improved reliability and gasless support
  */
 export async function fetchTokenList(chainId: number = 1): Promise<Token[]> {
   console.log('Fetching tokens for chain:', chainId);
-  
-  // Always start with curated list
-  const curatedTokens = getTokensForChain(chainId);
-  
-  // Try to fetch chain-specific token list
+
+  // Try to fetch chain-specific token list FIRST
   const tokenListUrl = TOKEN_LISTS[chainId];
-  
+
   if (!tokenListUrl) {
     console.warn('No token list URL for chain:', chainId);
-    return curatedTokens;
+    return getTokensForChain(chainId); // Only fallback if no URL
   }
-  
+
   try {
-    const response = await fetch(tokenListUrl, { 
-      signal: AbortSignal.timeout(5000)
-    });
-    
+    console.log('Attempting to fetch dynamic token list...');
+    const response = await fetchWithRetry(tokenListUrl);
+
     if (!response.ok) {
-      console.warn('Token list fetch failed, using curated list');
-      return curatedTokens;
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
-    
+
     const data = await response.json();
-    
+    console.log('Successfully fetched token list data');
+
     // Handle different token list formats
     let tokenArray = data.tokens || data;
-    
+
+    if (!Array.isArray(tokenArray)) {
+      throw new Error('Invalid token list format: expected array');
+    }
+
     // Filter tokens for the specific chain
     const fetchedTokens = tokenArray
       .filter((token: any) => {
@@ -90,24 +276,77 @@ export async function fetchTokenList(chainId: number = 1): Promise<Token[]> {
         logoURI: token.logoURI || token.logoUri || token.icon,
         chainId: chainId,
       }))
-      .slice(0, 100); // Top 100
-    
-    // Merge: curated tokens first, then unique fetched tokens
-    const allTokens = [...curatedTokens];
-    const existingAddresses = new Set(curatedTokens.map(t => t.address.toLowerCase()));
-    
-    for (const token of fetchedTokens) {
-      if (!existingAddresses.has(token.address.toLowerCase())) {
-        allTokens.push(token);
-      }
+      .slice(0, 100); // Top 10
+
+    console.log(`Successfully processed ${fetchedTokens.length} tokens for chain ${chainId}`);
+
+    // Fetch gasless approval tokens for this chain
+    const gaslessApprovalTokens = await fetchGaslessApprovalTokens(chainId);
+    console.log(`Gasless approval tokens for chain ${chainId}:`, gaslessApprovalTokens);
+
+    // Augment tokens with gasless support flag
+    const tokensWithGaslessSupport = fetchedTokens.map(token => ({
+      ...token,
+      supportsGasless: gaslessApprovalTokens.some(gaslessAddr => 
+        gaslessAddr.toLowerCase() === token.address.toLowerCase()
+      ),
+    }));
+
+    console.log(`Successfully processed ${tokensWithGaslessSupport.length} tokens with gasless support info for chain ${chainId}`);
+
+    // Ensure main tokens are present without hardcoding
+    const tokensWithMainTokens = await ensureMainTokensPresent(tokensWithGaslessSupport, chainId);
+    console.log(`Successfully processed ${tokensWithMainTokens.length} tokens with main tokens ensured for chain ${chainId}`);
+
+    // Cache the successful response
+    try {
+      localStorage.setItem(`tokenList_${chainId}`, JSON.stringify(tokensWithMainTokens));
+      localStorage.setItem(`tokenList_timestamp_${chainId}`, Date.now().toString());
+    } catch (cacheError) {
+      console.warn('Failed to cache token list:', cacheError);
     }
-    
-    console.log(`Total tokens loaded for chain ${chainId}:`, allTokens.length);
-    return allTokens;
-    
+
+    return tokensWithMainTokens;
+
   } catch (error) {
-    console.error('Failed to fetch token list:', error);
-    return curatedTokens;
+    console.error('Failed to fetch dynamic token list:', error);
+
+    // Try to use cached version before falling back
+    try {
+      const cachedTokens = localStorage.getItem(`tokenList_${chainId}`);
+      const cacheTimestamp = localStorage.getItem(`tokenList_timestamp_${chainId}`);
+
+      if (cachedTokens && cacheTimestamp) {
+        const cacheAge = Date.now() - parseInt(cacheTimestamp);
+        const maxCacheAge = 24 * 60 * 60 * 1000; // 24 hours
+
+        if (cacheAge < maxCacheAge) {
+          console.log('Using cached token list (age:', Math.round(cacheAge / 1000 / 60), 'minutes)');
+          return JSON.parse(cachedTokens);
+        } else {
+          console.log('Cached token list is too old, removing...');
+          localStorage.removeItem(`tokenList_${chainId}`);
+          localStorage.removeItem(`tokenList_timestamp_${chainId}`);
+        }
+      }
+    } catch (cacheError) {
+      console.warn('Failed to read cached token list:', cacheError);
+    }
+
+    // Only as last resort, use curated list
+    console.log('Falling back to curated token list');
+    const fallbackTokens = getTokensForChain(chainId);
+    
+    // Add gasless support info to fallback tokens as well
+    const gaslessApprovalTokens = await fetchGaslessApprovalTokens(chainId);
+    const tokensWithGaslessSupport = fallbackTokens.map(token => ({
+      ...token,
+      supportsGasless: gaslessApprovalTokens.some(gaslessAddr => 
+        gaslessAddr.toLowerCase() === token.address.toLowerCase()
+      ),
+    }));
+
+    return tokensWithGaslessSupport;
   }
 }
 
@@ -134,23 +373,28 @@ export async function getSwapQuote(
   sellAmount: string,
   takerAddress: string,
   chainId: number = 1
-): Promise<SwapQuote> {
+): Promise<any> {
   const params = new URLSearchParams({
     sellToken,
     buyToken,
     sellAmount,
     taker: takerAddress,
-    chainId: chainId.toString(),
+    chainId: chainId.toString()
   });
 
-  const response = await fetch(`${API_BASE_URL}/quote?${params}`);
+  const response = await fetch(`/api/0x/quote?${params}`);
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.reason || error.error || 'Failed to get swap quote');
+    throw new Error(error.error || 'Failed to get swap quote');
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // CRITICAL: Log actual API response structure for interface creation
+  console.log('🔍 0x GASLESS QUOTE RESPONSE STRUCTURE:', JSON.stringify(data, null, 2));
+
+  return data;
 }
 
 /**
@@ -161,22 +405,27 @@ export async function getTokenPrice(
   buyToken: string,
   sellAmount: string,
   chainId: number = 1
-): Promise<{ price: string; buyAmount: string }> {
+): Promise<any> {
   const params = new URLSearchParams({
     sellToken,
     buyToken,
     sellAmount,
-    chainId: chainId.toString(),
+    chainId: chainId.toString()
   });
 
-  const response = await fetch(`${API_BASE_URL}/price?${params}`);
+  const response = await fetch(`/api/0x/price?${params}`);
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.reason || error.error || 'Failed to get token price');
+    throw new Error(error.error || 'Failed to get token price');
   }
 
-  return response.json();
+  const data = await response.json();
+
+  // CRITICAL: Log actual API response structure for interface creation
+  console.log('🔍 0x PERMIT2 PRICE RESPONSE STRUCTURE:', JSON.stringify(data, null, 2));
+
+  return data;
 }
 
 // Curated tokens per chain (fallback + guaranteed liquidity)
@@ -277,7 +526,7 @@ export function getTokensForChain(chainId: number): Token[] {
     // Arbitrum
     42161: [
       {
-        address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
+        address: '0xCaD7828a19b363A2B44717AFB1786B5196974D8E',
         symbol: 'ETH',
         name: 'Ethereum',
         decimals: 18,
@@ -291,7 +540,7 @@ export function getTokensForChain(chainId: number): Token[] {
         logoURI: 'https://assets.coingecko.com/coins/images/2518/small/weth.png',
       },
       {
-        address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+        address: '0xaf88d065e77c8cC239327C5EDb3A432268e5831',
         symbol: 'USDC',
         name: 'USD Coin',
         decimals: 6,
@@ -309,10 +558,17 @@ export function getTokensForChain(chainId: number): Token[] {
         symbol: 'DAI',
         name: 'Dai Stablecoin',
         decimals: 18,
-        logoURI: 'https://assets.coingecko.com/coins/images/9956/small/dai-multi-collateral-mcd.png',
+        logoURI: 'https://assets.coingecko.com/coins/images/956/small/dai-multi-collateral-mcd.png',
       },
+      {
+        address: '0x354a6da3fcde098f8389cad84b0182725c6c91de',
+        symbol: 'COMP',
+        name: 'Compound',
+        decimals: 18,
+        logoURI: 'https://assets.coingecko.com/coins/images/10775/small/comp.png',
+      }
     ],
-    
+
     // Optimism
     10: [
       {
@@ -323,7 +579,7 @@ export function getTokensForChain(chainId: number): Token[] {
         logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
       },
       {
-        address: '0x4200000000000000000000000000000000000006',
+        address: '0x420000000006',
         symbol: 'WETH',
         name: 'Wrapped Ether',
         decimals: 18,
@@ -362,7 +618,7 @@ export function getTokensForChain(chainId: number): Token[] {
         logoURI: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
       },
       {
-        address: '0x4200000000000000000000000000000000000006',
+        address: '0x42000006',
         symbol: 'WETH',
         name: 'Wrapped Ether',
         decimals: 18,
@@ -414,3 +670,49 @@ export function getTokensForChain(chainId: number): Token[] {
 }
 
 export const COMMON_TOKENS = getTokensForChain(1);
+
+// Maximum uint256 value for unlimited approval
+const MAX_UINT256 = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+
+/**
+ * Approve a token for spending by a specific spender contract
+ * @param tokenAddress - The address of the ERC-20 token to approve
+ * @param spenderAddress - The address of the contract that will be allowed to spend the tokens
+ * @param amount - The amount to approve (use MAX_UINT256 for unlimited approval)
+ * @param signer - The ethers.js Signer object from the user's wallet
+ * @returns Transaction hash of the approval transaction
+ */
+export async function approveToken(
+  tokenAddress: string,
+  spenderAddress: string,
+  amount: string,
+  signer: ethers.Signer
+): Promise<string> {
+  try {
+    // Create contract instance using the token ABI (standard ERC-20 ABI)
+    const tokenContract = new ethers.Contract(
+      tokenAddress,
+      [
+        "function approve(address spender, uint256 amount) returns (bool)",
+        "function allowance(address owner, address spender) view returns (uint256)",
+        "function balanceOf(address owner) view returns (uint256)",
+        "function decimals() view returns (uint8)",
+        "function symbol() view returns (string)",
+        "function name() view returns (string)"
+      ],
+      signer
+    );
+
+    // Execute the approval transaction
+    const tx = await tokenContract.approve(spenderAddress, amount);
+    
+    // Wait for the transaction to be confirmed
+    const receipt = await tx.wait();
+    
+    console.log(`Token approval successful. Transaction hash: ${tx.hash}`);
+    return tx.hash;
+  } catch (error) {
+    console.error('Token approval failed:', error);
+    throw error;
+  }
+}

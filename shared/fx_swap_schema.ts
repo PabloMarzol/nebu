@@ -89,6 +89,27 @@ export const fxSwapOrders = pgTable(
   ]
 );
 
+// ALT5 Accounts - Track user ALT5 trading accounts
+export const alt5Accounts = pgTable(
+  "alt5_accounts",  // Table name in database
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id", { length: 36 })
+      .references(() => users.id)
+      .notNull(),
+    alt5AccountId: varchar("alt5_account_id", { length: 255 }).notNull().unique(),
+    alt5UserId: varchar("alt5_user_id", { length: 255 }).notNull(),
+    masterAccount: boolean("master_account").default(false).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("idx_alt5_accounts_user").on(table.userId),
+    index("idx_alt5_accounts_alt5_id").on(table.alt5AccountId),
+    index("idx_alt5_accounts_master").on(table.masterAccount),
+  ]
+);
+
 // FX Rate Snapshots - Historical rate tracking for audit & compliance
 export const fxRateSnapshots = pgTable(
   "fx_rate_snapshots",
@@ -255,6 +276,12 @@ export const insertFxSwapOrderSchema = createInsertSchema(fxSwapOrders).omit({
   createdAt: true,
 });
 
+export const insertAlt5AccountSchema = createInsertSchema(alt5Accounts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertFxRateSnapshotSchema = createInsertSchema(fxRateSnapshots).omit({
   id: true,
   createdAt: true,
@@ -280,6 +307,9 @@ export const insertFxSwapConfigSchema = createInsertSchema(fxSwapConfigs).omit({
 // Type exports
 export type FxSwapOrder = typeof fxSwapOrders.$inferSelect;
 export type InsertFxSwapOrder = z.infer<typeof insertFxSwapOrderSchema>;
+
+export type Alt5Account = typeof alt5Accounts.$inferSelect;
+export type InsertAlt5Account = z.infer<typeof insertAlt5AccountSchema>;
 
 export type FxRateSnapshot = typeof fxRateSnapshots.$inferSelect;
 export type InsertFxRateSnapshot = z.infer<typeof insertFxRateSnapshotSchema>;
@@ -322,4 +352,10 @@ export const ReconciliationStatus = {
   RECONCILED: "reconciled",
   DISCREPANCY_FOUND: "discrepancy_found",
   RESOLVED: "resolved",
+} as const;
+
+export const Alt5AccountStatus = {
+  ACTIVE: "active",
+  INACTIVE: "inactive",
+  SUSPENDED: "suspended",
 } as const;

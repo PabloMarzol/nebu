@@ -15,6 +15,13 @@
       "when": 1760632645801,
       "tag": "0001_wide_beast",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1762445832000,
+      "tag": "0002_add_alt5_accounts_table",
+      "breakpoints": true
     }
   ]
 }

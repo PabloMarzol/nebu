@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Alt5CustodialOnramp from '../components/fx-swap/alt5-custodial-onramp';
-import StripeOnramp from '../components/fx-swap/stripe-onramp';
 import { useWalletAuth } from '../hooks/useWalletAuth';
 
 const FXSwapPage: React.FC = () => {
-  const [selectedProvider, setSelectedProvider] = useState<'stripe' | 'alt5'>('alt5');
+  const [selectedProvider, setSelectedProvider] = useState<'alt5'>('alt5');
   const [swapHistory, setSwapHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const { isAuthenticated, userAddress } = useWalletAuth();
+  const { isAuthenticated, walletAddress } = useWalletAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -18,7 +17,7 @@ const FXSwapPage: React.FC = () => {
   const fetchSwapHistory = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/fx-swap/history?userId=${userAddress}`, {
+      const response = await fetch(`/api/fx-swap/history?userId=${walletAddress}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
@@ -55,40 +54,10 @@ const FXSwapPage: React.FC = () => {
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-          <div className="flex space-x-4 mb-6">
-            <button
-              onClick={() => setSelectedProvider('alt5')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                selectedProvider === 'alt5'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              ALT5 Pay (2% fees)
-            </button>
-            <button
-              onClick={() => setSelectedProvider('stripe')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                selectedProvider === 'stripe'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Stripe (2.9% + £0.30)
-            </button>
-          </div>
-
-          {selectedProvider === 'alt5' ? (
-            <Alt5CustodialOnramp 
-              onSwapComplete={handleSwapComplete} 
-              onSwapError={handleSwapError} 
-            />
-          ) : (
-            <StripeOnramp 
-              onSwapComplete={handleSwapComplete} 
-              onSwapError={handleSwapError} 
-            />
-          )}
+          <Alt5CustodialOnramp 
+            onSwapComplete={handleSwapComplete} 
+            onSwapError={handleSwapError} 
+          />
 
           <div className="mt-6 pt-6 border-t border-gray-200">
             <h3 className="text-lg font-semibold text-gray-800 mb-3">Current Rates</h3>
