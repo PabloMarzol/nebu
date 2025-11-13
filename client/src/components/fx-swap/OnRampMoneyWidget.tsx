@@ -141,6 +141,7 @@ const OnRampMoneyWidget: React.FC<OnRampMoneyWidgetProps> = ({
     try {
       const response = await fetch('/api/onramp-money/create-order', {
         method: 'POST',
+        credentials: 'include', // Include session cookie for authentication
         headers: {
           'Content-Type': 'application/json',
         },
