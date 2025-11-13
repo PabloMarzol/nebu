@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { onRampMoneyService } from '../services/onramp-money-service';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth } from '../middleware/auth-middleware';
 
 const router = Router();
 
