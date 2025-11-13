@@ -298,15 +298,24 @@ export async function fetchTokenList(chainId: number = 1): Promise<Token[]> {
     const tokensWithMainTokens = await ensureMainTokensPresent(tokensWithGaslessSupport, chainId);
     console.log(`Successfully processed ${tokensWithMainTokens.length} tokens with main tokens ensured for chain ${chainId}`);
 
+    // Prioritize gasless tokens by filtering to show only gasless-supported tokens first
+    // This ensures the UI shows the most relevant tokens for gasless swaps
+    const prioritizedTokens = tokensWithMainTokens.filter(token => token.supportsGasless);
+    console.log(`Successfully filtered ${prioritizedTokens.length} gasless-supported tokens for chain ${chainId}`);
+    
+    // If no gasless tokens found, fall back to all tokens with gasless support info
+    const finalTokens = prioritizedTokens.length > 0 ? prioritizedTokens : tokensWithMainTokens;
+    console.log(`Final token list has ${finalTokens.length} tokens for chain ${chainId}`);
+
     // Cache the successful response
     try {
-      localStorage.setItem(`tokenList_${chainId}`, JSON.stringify(tokensWithMainTokens));
+      localStorage.setItem(`tokenList_${chainId}`, JSON.stringify(finalTokens));
       localStorage.setItem(`tokenList_timestamp_${chainId}`, Date.now().toString());
     } catch (cacheError) {
       console.warn('Failed to cache token list:', cacheError);
     }
 
-    return tokensWithMainTokens;
+    return finalTokens;
 
   } catch (error) {
     console.error('Failed to fetch dynamic token list:', error);
@@ -346,7 +355,19 @@ export async function fetchTokenList(chainId: number = 1): Promise<Token[]> {
       ),
     }));
 
-    return tokensWithGaslessSupport;
+    // Prioritize gasless tokens in fallback as well
+    const prioritizedFallbackTokens = tokensWithGaslessSupport.filter(token => token.supportsGasless);
+    const finalFallbackTokens = prioritizedFallbackTokens.length > 0 ? prioritizedFallbackTokens : tokensWithGaslessSupport;
+    
+    // Cache the fallback response as well for consistency
+    try {
+      localStorage.setItem(`tokenList_${chainId}`, JSON.stringify(finalFallbackTokens));
+      localStorage.setItem(`tokenList_timestamp_${chainId}`, Date.now().toString());
+    } catch (cacheError) {
+      console.warn('Failed to cache fallback token list:', cacheError);
+    }
+    
+    return finalFallbackTokens;
   }
 }
 
@@ -526,7 +547,7 @@ export function getTokensForChain(chainId: number): Token[] {
     // Arbitrum
     42161: [
       {
-        address: '0xCaD7828a19b363A2B44717AFB1786B5196974D8E',
+        address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
         symbol: 'ETH',
         name: 'Ethereum',
         decimals: 18,
@@ -540,7 +561,7 @@ export function getTokensForChain(chainId: number): Token[] {
         logoURI: 'https://assets.coingecko.com/coins/images/2518/small/weth.png',
       },
       {
-        address: '0xaf88d065e77c8cC239327C5EDb3A432268e5831',
+        address: '0xaf88d065e77c8cC239327C5EDb3a432268e5831',
         symbol: 'USDC',
         name: 'USD Coin',
         decimals: 6,
