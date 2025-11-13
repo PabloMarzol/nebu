@@ -77,6 +77,7 @@ import fxFundingStatusRoutes from "./routes/fx-funding-status";
 import walletFundingRoutes from "./routes/wallet-funding";
 import alt5OnRampRoutes from "./routes/alt5-onramp-routes";
 import alt5CustodialRoutes from "./routes/alt5-custodial-routes";
+import onRampMoneyRoutes from "./routes/onramp-money-routes";
 import webhookTestRoutes from "./routes/webhook-test";
 import dotenv from "dotenv"
 dotenv.config()
@@ -3270,6 +3271,11 @@ app.get("/api/coincap/assets", async (req, res) => {
   console.log('[Routes] Registering ALT5 On-Ramp routes...');
   app.use('/api/alt5-onramp', alt5OnRampRoutes);
   console.log('[Routes] ALT5 On-Ramp routes registered successfully');
+
+  // OnRamp Money Routes (Global Fiat On-Ramp)
+  console.log('[Routes] Registering OnRamp Money routes...');
+  app.use('/api/onramp-money', onRampMoneyRoutes);
+  console.log('[Routes] OnRamp Money routes registered successfully');
 
   // FX-NOW-Swap Dedicated Routes
   console.log('[Routes] Registering FX-NOW-Swap routes...');
