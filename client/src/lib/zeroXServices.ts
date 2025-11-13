@@ -566,6 +566,13 @@ export function getTokensForChain(chainId: number): Token[] {
         name: 'Compound',
         decimals: 18,
         logoURI: 'https://assets.coingecko.com/coins/images/10775/small/comp.png',
+      },
+      {
+        address: '0x040d1edc9569d4bab2d15287dc5a4f10f56a56b8',
+        symbol: 'BAL',
+        name: 'Balancer',
+        decimals: 18,
+        logoURI: 'https://assets.coingecko.com/coins/images/10775/small/bal.png',
       }
     ],
 

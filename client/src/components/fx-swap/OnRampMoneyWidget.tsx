@@ -51,7 +51,7 @@ const OnRampMoneyWidget: React.FC<OnRampMoneyWidgetProps> = ({
   const [fiatAmount, setFiatAmount] = useState<string>('');
   const [fiatCurrency, setFiatCurrency] = useState<string>('INR');
   const [cryptoCurrency, setCryptoCurrency] = useState<string>('usdt');
-  const [network, setNetwork] = useState<string>('matic20');
+  const [network, setNetwork] = useState<string>('bsc-testnet');
   const [destinationWallet, setDestinationWallet] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('1'); // 1=Instant, 2=Bank
   const [phoneNumber, setPhoneNumber] = useState<string>('');
@@ -104,17 +104,17 @@ const OnRampMoneyWidget: React.FC<OnRampMoneyWidgetProps> = ({
     }
   }, [walletAddress]);
 
-  // Update available networks when crypto changes
-  useEffect(() => {
-    const selectedCrypto = cryptos.find(c => c.coin === cryptoCurrency);
-    if (selectedCrypto) {
-      setAvailableNetworks(selectedCrypto.networks);
-      // Reset network to first available if current not supported
-      if (!selectedCrypto.networks.includes(network)) {
-        setNetwork(selectedCrypto.networks[0] || 'matic20');
-      }
-    }
-  }, [cryptoCurrency, cryptos]);
+      // Update available networks when crypto changes
+      useEffect(() => {
+        const selectedCrypto = cryptos.find(c => c.coin === cryptoCurrency);
+        if (selectedCrypto) {
+          setAvailableNetworks(selectedCrypto.networks);
+          // Reset network to first available if current not supported
+          if (!selectedCrypto.networks.includes(network)) {
+            setNetwork(selectedCrypto.networks[0] || 'bsc-testnet');
+          }
+        }
+      }, [cryptoCurrency, cryptos]);
 
   // Handle form submission
   const handleProceed = async () => {
