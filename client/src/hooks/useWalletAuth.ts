@@ -77,9 +77,13 @@ export function useWalletAuth(): WalletAuthState {
 
       return () => {
         window.removeEventListener('storage', handleStorageChange);
-        if (window.ethereum.removeListener) {
+        // Use 'off' for removing listeners (compatible with both MetaMask and other providers)
+        if (window.ethereum && window.ethereum.removeListener) {
           window.ethereum.removeListener('chainChanged', handleChainChanged);
           window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+        } else if (window.ethereum && typeof window.ethereum.off === 'function') {
+          window.ethereum.off('chainChanged', handleChainChanged);
+          window.ethereum.off('accountsChanged', handleAccountsChanged);
         }
       };
     }

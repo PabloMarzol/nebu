@@ -141,6 +141,7 @@ const OnRampMoneyWidget: React.FC<OnRampMoneyWidgetProps> = ({
     try {
       const response = await fetch('/api/onramp-money/create-order', {
         method: 'POST',
+        credentials: 'include', // Include session cookie for authentication
         headers: {
           'Content-Type': 'application/json',
         },
@@ -367,7 +368,8 @@ const OnRampMoneyWidget: React.FC<OnRampMoneyWidgetProps> = ({
           <Button
             onClick={handleProceed}
             disabled={!isAuthenticated || loading || !fiatAmount || !destinationWallet}
-            className="w-full h-12 text-base font-semibold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+            className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+            size="lg"
           >
             {loading ? (
               <>
