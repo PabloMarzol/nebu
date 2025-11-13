@@ -193,7 +193,7 @@ const OnRampMoneyWidget: React.FC<OnRampMoneyWidgetProps> = ({
             <div>
               <CardTitle className="flex items-center gap-2 text-xl">
                 <Globe className="w-5 h-5 text-blue-400" />
-                OnRamp Money
+                NebulaX OnRamp
               </CardTitle>
               <CardDescription className="mt-1">
                 Buy crypto with fiat using instant payment methods
