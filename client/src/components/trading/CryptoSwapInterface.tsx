@@ -56,9 +56,19 @@ export default function CryptoSwapInterface() {
   const [isTokenPickerOpen, setIsTokenPickerOpen] = useState(false);
   const [tokenPickerMode, setTokenPickerMode] = useState<'sell' | 'buy'>('sell');
   const [tokenSearchQuery, setTokenSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [showGaslessOnly, setShowGaslessOnly] = useState(false);
-  
+
   const currentChain = getChainById(chainId);
+
+  // 🚀 OPTIMIZATION 3: Debounced search (300ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(tokenSearchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [tokenSearchQuery]);
   
   // Load tokens when chain changes
   useEffect(() => {
@@ -447,7 +457,8 @@ export default function CryptoSwapInterface() {
     }
   };
 
-  const filteredTokens = searchTokens(allTokens, tokenSearchQuery)
+  // 🚀 Use debounced query for filtering to prevent UI lag
+  const filteredTokens = searchTokens(allTokens, debouncedSearchQuery)
     .filter(token => !showGaslessOnly || token.supportsGasless);
 
   return (
