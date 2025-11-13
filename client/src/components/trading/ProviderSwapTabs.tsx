@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useWalletAuth } from "@/hooks/useWalletAuth";
 import FXProSwap from './FX-ProSwap';
 import Alt5CustodialOnramp from '../fx-swap/alt5-custodial-onramp';
+import OnRampMoneyWidget from '../fx-swap/OnRampMoneyWidget';
 import FXNOWSwap from './FX-NOW-Swap';
 import FXCRYSwap from './FX-CRY-Swap';
 import FXRAMPSwap from './FX-RAMP-Swap';
@@ -23,6 +24,7 @@ export default function ProviderSwapTabs({ defaultTab = "stripe" }: ProviderSwap
   const [providerHealth, setProviderHealth] = useState({
     stripe: { status: 'healthy', message: 'Operational' },
     alt5pay: { status: 'healthy', message: 'Operational' },
+    onrampmoney: { status: 'healthy', message: 'Operational' },
     nowpayments: { status: 'healthy', message: 'Operational' },
     changenow: { status: 'healthy', message: 'Operational' },
     ramp: { status: 'healthy', message: 'Operational' }
@@ -52,6 +54,18 @@ export default function ProviderSwapTabs({ defaultTab = "stripe" }: ProviderSwap
       minAmount: 25,
       maxAmount: 50000,
       fees: '2.0%'
+    },
+    {
+      id: 'onrampmoney',
+      name: 'OnRamp Money',
+      component: OnRampMoneyWidget,
+      icon: Globe,
+      color: 'from-blue-500 to-cyan-600',
+      description: 'Global fiat on-ramp with instant payment methods',
+      features: ['Instant Fiat', 'Multi-Currency', 'Licensed LP'],
+      minAmount: 10,
+      maxAmount: 100000,
+      fees: 'Varies by region'
     }
     // Other providers are implemented but hidden for now:
     // {
@@ -139,7 +153,7 @@ export default function ProviderSwapTabs({ defaultTab = "stripe" }: ProviderSwap
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {providers.map((provider) => (
               <div key={provider.id} className="p-4 bg-slate-800/30 rounded-lg border border-slate-600">
                 <div className="flex items-center justify-between mb-2">
@@ -162,7 +176,7 @@ export default function ProviderSwapTabs({ defaultTab = "stripe" }: ProviderSwap
 
       {/* Provider Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-slate-800/50 border border-slate-600">
+        <TabsList className="grid w-full grid-cols-3 bg-slate-800/50 border border-slate-600">
           {providers.map((provider) => (
             <TabsTrigger
               key={provider.id}
@@ -203,8 +217,11 @@ export default function ProviderSwapTabs({ defaultTab = "stripe" }: ProviderSwap
 
               {/* Provider Component */}
               <provider.component
-                onSuccess={(data) => handleProviderSuccess(provider.id, data)}
-                onError={(error) => handleProviderError(provider.id, error)}
+                onSwapComplete={(data: any) => handleProviderSuccess(provider.id, data)}
+                onSwapInitiated={(data: any) => handleProviderSuccess(provider.id, data)}
+                onSwapError={(error: any) => handleProviderError(provider.id, error)}
+                onSuccess={(data: any) => handleProviderSuccess(provider.id, data)}
+                onError={(error: any) => handleProviderError(provider.id, error)}
               />
             </div>
           </TabsContent>
