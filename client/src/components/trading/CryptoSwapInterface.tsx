@@ -294,10 +294,12 @@ export default function CryptoSwapInterface() {
           buyToken!.address,
           sellAmountWei,
           walletAddress,
-          chainId
+          chainId,
+          sellToken.supportsGasless || false,
+          buyToken!.supportsGasless || false
         );
         setQuote(updatedQuote);
-        
+
         // Clear error if allowance is now sufficient
         if (!updatedQuote.issues?.allowance) {
           setError(null);
@@ -329,12 +331,15 @@ export default function CryptoSwapInterface() {
     try {
       const sellAmountWei = (parseFloat(sellAmount) * Math.pow(10, sellToken.decimals)).toString();
       
+      // 🚀 FIX: Pass gasless support flags to use correct endpoint
       const swapQuote = await getSwapQuote(
         sellToken.address,
         buyToken.address,
         sellAmountWei,
         walletAddress,
-        chainId
+        chainId,
+        sellToken.supportsGasless || false,
+        buyToken.supportsGasless || false
       );
       
       // Log the received swap quote for debugging

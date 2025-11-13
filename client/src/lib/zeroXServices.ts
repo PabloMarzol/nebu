@@ -350,11 +350,24 @@ async function fetchTokenListFresh(chainId: number): Promise<Token[]> {
     throw new Error('Invalid token list format: expected array');
   }
 
+  // 🐛 DEBUG: Log raw token array structure for debugging Base chain
+  if (chainId === 8453 || tokenArray.length < 10) {
+    console.log('🔍 Raw token array sample (first 3 tokens):', JSON.stringify(tokenArray.slice(0, 3), null, 2));
+    console.log('🔍 Total tokens in array:', tokenArray.length);
+  }
+
   // Filter and map tokens for the specific chain
   const fetchedTokens = tokenArray
     .filter((token: any) => {
       const tokenChainId = token.chainId || token.chain || chainId;
-      return tokenChainId === chainId;
+      const matches = tokenChainId === chainId;
+
+      // 🐛 DEBUG: Log filtering for Base chain
+      if (chainId === 8453 && tokenArray.length < 20) {
+        console.log(`🔍 Token ${token.symbol}: chainId=${tokenChainId}, matches=${matches}`);
+      }
+
+      return matches;
     })
     .map((token: any) => ({
       address: token.address,
@@ -369,7 +382,7 @@ async function fetchTokenListFresh(chainId: number): Promise<Token[]> {
     }))
     .slice(0, 100);
 
-  console.log(`✅ Processed ${fetchedTokens.length} tokens with gasless info`);
+  console.log(`✅ Processed ${fetchedTokens.length} tokens with gasless info for chain ${chainId}`);
 
   // Ensure main tokens are present
   const tokensWithMainTokens = await ensureMainTokensPresent(fetchedTokens, chainId);
@@ -401,9 +414,41 @@ export function searchTokens(tokens: Token[], query: string): Token[] {
 }
 
 /**
- * Get a swap quote from 0x API via backend proxy
+ * Get a permit2 swap quote (for non-gasless tokens) from 0x API via backend proxy
  */
-export async function getSwapQuote(
+export async function getPermit2Quote(
+  sellToken: string,
+  buyToken: string,
+  sellAmount: string,
+  takerAddress: string,
+  chainId: number = 1
+): Promise<any> {
+  const params = new URLSearchParams({
+    sellToken,
+    buyToken,
+    sellAmount,
+    taker: takerAddress,
+    chainId: chainId.toString()
+  });
+
+  const response = await fetch(`/api/0x/permit2-quote?${params}`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to get permit2 quote');
+  }
+
+  const data = await response.json();
+
+  console.log('🔍 0x PERMIT2 QUOTE RESPONSE:', JSON.stringify(data, null, 2));
+
+  return data;
+}
+
+/**
+ * Get a gasless swap quote from 0x API via backend proxy (only for gasless tokens)
+ */
+export async function getGaslessQuote(
   sellToken: string,
   buyToken: string,
   sellAmount: string,
@@ -422,15 +467,44 @@ export async function getSwapQuote(
 
   if (!response.ok) {
     const error = await response.json();
-    throw new Error(error.error || 'Failed to get swap quote');
+    throw new Error(error.error || 'Failed to get gasless quote');
   }
 
   const data = await response.json();
 
-  // CRITICAL: Log actual API response structure for interface creation
-  console.log('🔍 0x GASLESS QUOTE RESPONSE STRUCTURE:', JSON.stringify(data, null, 2));
+  console.log('🔍 0x GASLESS QUOTE RESPONSE:', JSON.stringify(data, null, 2));
 
   return data;
+}
+
+/**
+ * Get a swap quote - automatically chooses between gasless and permit2 based on token support
+ * This is the main function that should be used by the UI
+ */
+export async function getSwapQuote(
+  sellToken: string,
+  buyToken: string,
+  sellAmount: string,
+  takerAddress: string,
+  chainId: number = 1,
+  sellTokenSupportsGasless: boolean = false,
+  buyTokenSupportsGasless: boolean = false
+): Promise<any> {
+  // 🚀 SMART ROUTING: Use gasless endpoint only if BOTH tokens support gasless
+  const useGasless = sellTokenSupportsGasless && buyTokenSupportsGasless;
+
+  console.log(`🔀 Quote routing decision: ${useGasless ? 'GASLESS' : 'PERMIT2'}`, {
+    sellToken,
+    buyToken,
+    sellTokenSupportsGasless,
+    buyTokenSupportsGasless
+  });
+
+  if (useGasless) {
+    return getGaslessQuote(sellToken, buyToken, sellAmount, takerAddress, chainId);
+  } else {
+    return getPermit2Quote(sellToken, buyToken, sellAmount, takerAddress, chainId);
+  }
 }
 
 /**
