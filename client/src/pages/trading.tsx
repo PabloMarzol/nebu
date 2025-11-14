@@ -278,7 +278,7 @@ export default function Trading() {
 
   return (
     <div className="min-h-screen page-content">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+      <div className="w-full">
         {/* Risk Disclosure Banner */}
         {showRiskBanner && (
           <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6 relative">
@@ -412,156 +412,121 @@ export default function Trading() {
                 </CardContent>
               </Card>
 
-            {/* 🆕 NEW: Spot Trading Layout - Professional 3:1 Ratio with QuickTrade Below OrderBook */}
+            {/* 🚀 NEW: Professional Trading Layout with CSS Grid */}
             {selectedTradingType === "spot" && (
-              <>
-                {/* Live Market Data Overview */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                  <MarketDataStatus />
-                  <BlockchainWalletTracker />
-                </div>
+              <div className="trading-layout-grid">
+                {/* HEADER: Trading Type + Market Stats */}
+                <div className="trading-header">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-4">
+                      <h2 className="text-xl font-bold text-white">Spot Trading</h2>
+                      <Badge variant="outline" className="bg-green-500/10 border-green-500/30">
+                        <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
+                        Live Market
+                      </Badge>
+                      <Badge variant="outline" className="bg-blue-500/10 border-blue-500/30">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+                        Powered by Hyperliquid
+                      </Badge>
+                    </div>
 
-                {/* Live Price Ticker */}
-                <div className="mb-6 p-4 bg-slate-900/50 rounded-lg border border-slate-700">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="flex items-center justify-center p-3 bg-slate-800/50 rounded-lg border border-slate-600 min-h-[60px]">
-                      <LivePriceWithChange symbol="BTC/USDT" className="text-center w-full" />
-                    </div>
-                    <div className="flex items-center justify-center p-3 bg-slate-800/50 rounded-lg border border-slate-600 min-h-[60px]">
-                      <LivePriceWithChange symbol="ETH/USDT" className="text-center w-full" />
-                    </div>
-                    <div className="flex items-center justify-center p-3 bg-slate-800/50 rounded-lg border border-slate-600 min-h-[60px]">
-                      <LivePriceWithChange symbol="SOL/USDT" className="text-center w-full" />
-                    </div>
-                    <div className="flex items-center justify-center p-3 bg-slate-800/50 rounded-lg border border-slate-600 min-h-[60px]">
-                      <LivePriceWithChange symbol="ADA/USDT" className="text-center w-full" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Main Trading Area - Professional Layout - NO GRID CONSTRAINTS */}
-                <div className="space-y-4">
-                  {/* Top Section: Chart + Side Panel (Flexbox Layout) */}
-                  <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Chart Section - Takes remaining space */}
-                    <div className="flex-1">
-                      <div className="glass rounded-lg border border-slate-700 overflow-hidden">
-                        <TradingChart symbol="BTC/USDT" />
+                    {/* Live Price Ticker - Compact */}
+                    <div className="flex items-center gap-3">
+                      <div className="text-sm">
+                        <LivePriceWithChange symbol="BTC/USDT" />
                       </div>
-                    </div>
-                    
-                    {/* Right Panel - Fixed width on desktop, full width on mobile */}
-                    <div className="w-full lg:w-80 space-y-4">
-                      {/* OrderBook Component */}
-                      <div className="glass rounded-lg border border-slate-700 overflow-hidden">
-                        <OrderBook symbol="BTC/USDT" />
+                      <div className="text-sm">
+                        <LivePriceWithChange symbol="ETH/USDT" />
                       </div>
-                      
-                      {/* QuickTrade Panel - Hyperliquid Trading Interface */}
-                      <div className="glass rounded-lg border border-slate-700 overflow-hidden">
-                        <HyperliquidTradingPanel tradingMode="spot" />
+                      <div className="text-sm">
+                        <LivePriceWithChange symbol="SOL/USDT" />
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Trading Dashboard - Account Balance, Active Orders, Hyperliquid Status */}
+                {/* CHART AREA: TradingChart Component */}
+                <div className="chart-area">
+                  <div className="chart-container">
+                    <TradingChart symbol="BTC/USDT" />
+                  </div>
+                </div>
+
+                {/* SIDEBAR: OrderBook + QuickTrade Panel */}
+                <div className="trading-sidebar">
+                  {/* OrderBook - Top Half */}
+                  <div className="sidebar-orderbook">
+                    <OrderBook symbol="BTC/USDT" />
+                  </div>
+
+                  {/* QuickTrade Panel - Bottom Half */}
+                  <div className="sidebar-trade-panel">
+                    <HyperliquidTradingPanel tradingMode="spot" />
+                  </div>
+                </div>
+
+                {/* BOTTOM: Positions/Orders Tabs */}
+                <div className="trading-bottom">
                   <TradingDashboard tradingMode="spot" selectedPair="BTC/USDT" />
-
-                  {/* Analytics Sections - Flexbox Layout */}
-                  <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Recent Trades */}
-                    <div className="flex-1 glass rounded-lg border border-slate-700 overflow-hidden">
-                      <RecentTrades symbol="BTC/USDT" />
-                    </div>
-                    
-                    {/* Portfolio Overview */}
-                    <div className="flex-1 glass rounded-lg border border-slate-700 overflow-hidden">
-                      <PortfolioOverview />
-                    </div>
-                    
-                    {/* AI Trading Assistant */}
-                    <div className="flex-1 glass rounded-lg border border-slate-700 overflow-hidden">
-                      <SimpleAIChat />
-                    </div>
-                  </div>
                 </div>
-
-              </>
+              </div>
             )}
 
-            {/* 🆕 NEW: Futures Trading Layout - Professional 3:1 Ratio with QuickTrade Below OrderBook */}
+            {/* 🚀 NEW: Futures Trading Layout with CSS Grid */}
             {selectedTradingType === "futures" && (
-              <>
-                {/* Hyperliquid Futures Header */}
-                <Card className="glass">
-                  <CardContent className="p-6">
-                    <div className="text-center">
-                      <h3 className="text-2xl font-bold text-white mb-2">Hyperliquid Perpetual Futures</h3>
-                      <p className="text-gray-300 mb-4">Professional perpetual futures trading with up to 50x leverage</p>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-                          <h4 className="text-lg font-semibold text-blue-400 mb-2">Perpetual Contracts</h4>
-                          <p className="text-gray-400 text-sm">Trade without expiry dates with funding rates</p>
-                        </div>
-                        <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
-                          <h4 className="text-lg font-semibold text-purple-400 mb-2">High Leverage</h4>
-                          <p className="text-gray-400 text-sm">Up to 50x leverage on major pairs</p>
-                        </div>
-                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                          <h4 className="text-lg font-semibold text-green-400 mb-2">Low Fees</h4>
-                          <p className="text-gray-400 text-sm">Competitive maker/taker fees</p>
-                        </div>
-                      </div>
+              <div className="trading-layout-grid">
+                {/* HEADER: Futures Info + Market Stats */}
+                <div className="trading-header">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-4">
+                      <h2 className="text-xl font-bold text-white">Perpetual Futures</h2>
+                      <Badge variant="outline" className="bg-blue-500/10 border-blue-500/30">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+                        Up to 50x Leverage
+                      </Badge>
+                      <Badge variant="outline" className="bg-purple-500/10 border-purple-500/30">
+                        <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
+                        Hyperliquid
+                      </Badge>
                     </div>
-                  </CardContent>
-                </Card>
 
-                {/* Main Trading Area - Professional Layout - NO GRID CONSTRAINTS */}
-                <div className="space-y-4">
-                  {/* Top Section: Chart + Side Panel (Flexbox Layout) */}
-                  <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Chart Section - Takes remaining space */}
-                    <div className="flex-1">
-                      <TradingChart symbol="BTC-PERP" />
-                    </div>
-                    
-                    {/* Right Panel - Fixed width on desktop, full width on mobile */}
-                    <div className="w-full lg:w-80 space-y-4">
-                      {/* OrderBook Component */}
-                      <div className="glass rounded-lg border border-slate-700 overflow-hidden">
-                        <OrderBook symbol="BTC-PERP" />
+                    {/* Live Price Ticker - Compact */}
+                    <div className="flex items-center gap-3">
+                      <div className="text-sm">
+                        <LivePriceWithChange symbol="BTC-PERP" />
                       </div>
-                      
-                      {/* QuickTrade Panel - Hyperliquid Trading Interface */}
-                      <div className="glass rounded-lg border border-slate-700 overflow-hidden">
-                        <HyperliquidTradingPanel tradingMode="futures" />
+                      <div className="text-sm">
+                        <LivePriceWithChange symbol="ETH-PERP" />
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Trading Dashboard - Account Balance, Active Orders, Hyperliquid Status */}
-                  <TradingDashboard tradingMode="futures" selectedPair="BTC-PERP" />
-
-                  {/* Analytics Sections - Flexbox Layout */}
-                  <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Recent Trades */}
-                    <div className="flex-1 glass rounded-lg border border-slate-700 overflow-hidden">
-                      <RecentTrades symbol="BTC-PERP" />
-                    </div>
-                    
-                    {/* Portfolio Overview */}
-                    <div className="flex-1 glass rounded-lg border border-slate-700 overflow-hidden">
-                      <PortfolioOverview />
-                    </div>
-                    
-                    {/* Portfolio Quick Actions */}
-                    <div className="flex-1 glass rounded-lg border border-slate-700 overflow-hidden">
-                      <PortfolioQuickActions />
                     </div>
                   </div>
                 </div>
 
-              </>
+                {/* CHART AREA: TradingChart Component */}
+                <div className="chart-area">
+                  <div className="chart-container">
+                    <TradingChart symbol="BTC-PERP" />
+                  </div>
+                </div>
+
+                {/* SIDEBAR: OrderBook + QuickTrade Panel */}
+                <div className="trading-sidebar">
+                  {/* OrderBook - Top Half */}
+                  <div className="sidebar-orderbook">
+                    <OrderBook symbol="BTC-PERP" />
+                  </div>
+
+                  {/* QuickTrade Panel - Bottom Half */}
+                  <div className="sidebar-trade-panel">
+                    <HyperliquidTradingPanel tradingMode="futures" />
+                  </div>
+                </div>
+
+                {/* BOTTOM: Positions/Orders Tabs */}
+                <div className="trading-bottom">
+                  <TradingDashboard tradingMode="futures" selectedPair="BTC-PERP" />
+                </div>
+              </div>
             )}
 
             {selectedTradingType === "options" && (
