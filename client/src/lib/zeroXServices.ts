@@ -177,368 +177,8 @@ async function ensureMainTokensPresent(tokens: Token[], chainId: number): Promis
 }
 
 /**
- * Fetches token metadata from various sources for given symbols and chain
+ * Curated tokens per chain (fallback + guaranteed liquidity)
  */
-async function fetchTokenMetadata(symbols: string[], chainId: number): Promise<Token[]> {
-  try {
-    // Try to get token addresses from common token lists first
-    const tokenListUrl = getTokenListUrl(chainId);
-    if (tokenListUrl) {
-      const response = await fetchWithRetry(tokenListUrl);
-      if (response.ok) {
-        const data = await response.json();
-        const tokenArray = data.tokens || data;
-        
-        if (Array.isArray(tokenArray)) {
-          const foundTokens: Token[] = [];
-          const symbolsLower = symbols.map(s => s.toLowerCase());
-          
-          for (const token of tokenArray) {
-            if (token.chainId === chainId && symbolsLower.includes(token.symbol.toLowerCase())) {
-              foundTokens.push({
-                address: token.address,
-                symbol: token.symbol,
-                name: token.name,
-                decimals: token.decimals,
-                logoURI: token.logoURI || token.logoUri,
-                chainId: chainId,
-                supportsGasless: false // Will be updated later
-              });
-            }
-          }
-          
-          // If we found all symbols, return them
-          if (foundTokens.length === symbols.length) {
-            return foundTokens;
-          }
-        }
-      }
-    }
-    
-    // Fallback: Use curated tokens per chain as reference
-    const curatedTokens = getTokensForChain(chainId);
-    const foundTokens: Token[] = [];
-    
-    for (const symbol of symbols) {
-      const token = curatedTokens.find(t => t.symbol.toUpperCase() === symbol.toUpperCase());
-      if (token) {
-        foundTokens.push(token);
-      }
-    }
-    
-    return foundTokens;
-  } catch (error) {
-    console.error('Error fetching token metadata:', error);
-    return [];
-  }
-}
-
-/**
- * Get token list URL for a specific chain
- */
-function getTokenListUrl(chainId: number): string | undefined {
-  const TOKEN_LISTS: Record<number, string> = {
-    1: 'https://tokens.coingecko.com/uniswap/all.json',
-    137: 'https://api-polygon-tokens.polygon.technology/tokenlists/default.tokenlist.json',
-    42161: 'https://tokenlist.arbitrum.io/ArbTokenLists/arbed_arb_whitelist_era.json',
-    10: 'https://static.optimism.io/optimism.tokenlist.json',
-    8453: 'https://token-list.base.org',
-    56: 'https://tokens.pancakeswap.finance/pancakeswap-extended.json',
-  };
-  return TOKEN_LISTS[chainId];
-}
-
-/**
- * Fetch popular tokens dynamically per chain with improved reliability and gasless support
- * Optimized with: cache-first strategy, parallel API calls, stale-while-revalidate
- */
-export async function fetchTokenList(chainId: number = 1): Promise<Token[]> {
-  console.log('⚡ Fetching tokens for chain:', chainId);
-
-  const tokenListUrl = TOKEN_LISTS[chainId];
-
-  if (!tokenListUrl) {
-    console.warn('No token list URL for chain:', chainId);
-    return getTokensForChain(chainId);
-  }
-
-  // 🚀 OPTIMIZATION 1: Cache-first strategy (stale-while-revalidate)
-  let cachedTokens: Token[] | null = null;
-  let cacheAge = Infinity;
-
-  try {
-    const cached = localStorage.getItem(`tokenList_${chainId}`);
-    const timestamp = localStorage.getItem(`tokenList_timestamp_${chainId}`);
-
-    if (cached && timestamp) {
-      cachedTokens = JSON.parse(cached);
-      cacheAge = Date.now() - parseInt(timestamp);
-      const maxCacheAge = 24 * 60 * 60 * 1000; // 24 hours
-
-        // Return cached immediately if fresh enough
-        if (cacheAge < maxCacheAge && cachedTokens) {
-          console.log(`✅ Using cached tokens (age: ${Math.round(cacheAge / 1000 / 60)}min)`);
-
-          // Revalidate in background if cache is older than 5 minutes
-          if (cacheAge > 5 * 60 * 1000) {
-            console.log('🔄 Revalidating in background...');
-            fetchTokenListFresh(chainId).catch(err =>
-              console.warn('Background revalidation failed:', err)
-            );
-          }
-
-          return cachedTokens;
-        }
-    }
-  } catch (cacheError) {
-    console.warn('Cache read failed:', cacheError);
-  }
-
-  // Cache miss or expired - fetch fresh data
-  try {
-    const freshTokens = await fetchTokenListFresh(chainId);
-    return freshTokens;
-  } catch (error) {
-    console.error('Failed to fetch fresh token list:', error);
-
-    // Return stale cache if available
-    if (cachedTokens) {
-      console.log('⚠️ Using stale cache as fallback');
-      return cachedTokens;
-    }
-
-    // Last resort: curated list with gasless info
-    console.log('📋 Falling back to curated token list');
-    const fallbackTokens = getTokensForChain(chainId);
-    const gaslessTokens = await fetchGaslessApprovalTokens(chainId);
-
-    return fallbackTokens.map(token => ({
-      ...token,
-      supportsGasless: gaslessTokens.some(addr =>
-        addr.toLowerCase() === token.address.toLowerCase()
-      ),
-    }));
-  }
-}
-
-/**
- * Helper function to fetch fresh token list with parallel API calls
- */
-async function fetchTokenListFresh(chainId: number): Promise<Token[]> {
-  const tokenListUrl = TOKEN_LISTS[chainId];
-
-  if (!tokenListUrl) {
-    throw new Error('No token list URL for chain');
-  }
-
-  console.log('🌐 Fetching fresh token list...');
-
-  // 🚀 OPTIMIZATION 2: Parallel API calls (tokens + gasless)
-  const [tokenResponse, gaslessTokens] = await Promise.all([
-    fetchWithRetry(tokenListUrl),
-    fetchGaslessApprovalTokens(chainId)
-  ]);
-
-  if (!tokenResponse.ok) {
-    throw new Error(`HTTP ${tokenResponse.status}: ${tokenResponse.statusText}`);
-  }
-
-  const data = await tokenResponse.json();
-  let tokenArray = data.tokens || data;
-
-  if (!Array.isArray(tokenArray)) {
-    throw new Error('Invalid token list format: expected array');
-  }
-
-  // 🐛 DEBUG: Log raw token array structure for debugging Base chain
-  if (chainId === 8453 || tokenArray.length < 10) {
-    console.log('🔍 Raw token array sample (first 3 tokens):', JSON.stringify(tokenArray.slice(0, 3), null, 2));
-    console.log('🔍 Total tokens in array:', tokenArray.length);
-  }
-
-  // Filter and map tokens for the specific chain
-  const fetchedTokens = tokenArray
-    .filter((token: any) => {
-      const tokenChainId = token.chainId || token.chain || chainId;
-      const matches = tokenChainId === chainId;
-
-      // 🐛 DEBUG: Log filtering for Base chain
-      if (chainId === 8453 && tokenArray.length < 20) {
-        console.log(`🔍 Token ${token.symbol}: chainId=${tokenChainId}, matches=${matches}`);
-      }
-
-      return matches;
-    })
-    .map((token: any) => ({
-      address: token.address,
-      symbol: token.symbol,
-      name: token.name,
-      decimals: token.decimals,
-      logoURI: token.logoURI || token.logoUri || token.icon,
-      chainId: chainId,
-      supportsGasless: gaslessTokens.some(addr =>
-        addr.toLowerCase() === token.address.toLowerCase()
-      ),
-    }))
-    .slice(0, 100);
-
-  console.log(`✅ Processed ${fetchedTokens.length} tokens with gasless info for chain ${chainId}`);
-
-  // Ensure main tokens are present
-  const tokensWithMainTokens = await ensureMainTokensPresent(fetchedTokens, chainId);
-
-  // Cache the successful response
-  try {
-    localStorage.setItem(`tokenList_${chainId}`, JSON.stringify(tokensWithMainTokens));
-    localStorage.setItem(`tokenList_timestamp_${chainId}`, Date.now().toString());
-    console.log('💾 Tokens cached successfully');
-  } catch (cacheError) {
-    console.warn('Failed to cache tokens:', cacheError);
-  }
-
-  return tokensWithMainTokens;
-}
-
-/**
- * Search tokens by symbol or name
- */
-export function searchTokens(tokens: Token[], query: string): Token[] {
-  if (!query) return tokens;
-  
-  const lowerQuery = query.toLowerCase();
-  return tokens.filter(token => 
-    token.symbol.toLowerCase().includes(lowerQuery) ||
-    token.name.toLowerCase().includes(lowerQuery) ||
-    token.address.toLowerCase().includes(lowerQuery)
-  );
-}
-
-/**
- * Get a permit2 swap quote (for non-gasless tokens) from 0x API via backend proxy
- */
-export async function getPermit2Quote(
-  sellToken: string,
-  buyToken: string,
-  sellAmount: string,
-  takerAddress: string,
-  chainId: number = 1
-): Promise<any> {
-  const params = new URLSearchParams({
-    sellToken,
-    buyToken,
-    sellAmount,
-    taker: takerAddress,
-    chainId: chainId.toString()
-  });
-
-  const response = await fetch(`/api/0x/permit2-quote?${params}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to get permit2 quote');
-  }
-
-  const data = await response.json();
-
-  console.log('🔍 0x PERMIT2 QUOTE RESPONSE:', JSON.stringify(data, null, 2));
-
-  return data;
-}
-
-/**
- * Get a gasless swap quote from 0x API via backend proxy (only for gasless tokens)
- */
-export async function getGaslessQuote(
-  sellToken: string,
-  buyToken: string,
-  sellAmount: string,
-  takerAddress: string,
-  chainId: number = 1
-): Promise<any> {
-  const params = new URLSearchParams({
-    sellToken,
-    buyToken,
-    sellAmount,
-    taker: takerAddress,
-    chainId: chainId.toString()
-  });
-
-  const response = await fetch(`/api/0x/quote?${params}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to get gasless quote');
-  }
-
-  const data = await response.json();
-
-  console.log('🔍 0x GASLESS QUOTE RESPONSE:', JSON.stringify(data, null, 2));
-
-  return data;
-}
-
-/**
- * Get a swap quote - automatically chooses between gasless and permit2 based on token support
- * This is the main function that should be used by the UI
- */
-export async function getSwapQuote(
-  sellToken: string,
-  buyToken: string,
-  sellAmount: string,
-  takerAddress: string,
-  chainId: number = 1,
-  sellTokenSupportsGasless: boolean = false,
-  buyTokenSupportsGasless: boolean = false
-): Promise<any> {
-  // 🚀 SMART ROUTING: Use gasless endpoint only if BOTH tokens support gasless
-  const useGasless = sellTokenSupportsGasless && buyTokenSupportsGasless;
-
-  console.log(`🔀 Quote routing decision: ${useGasless ? 'GASLESS' : 'PERMIT2'}`, {
-    sellToken,
-    buyToken,
-    sellTokenSupportsGasless,
-    buyTokenSupportsGasless
-  });
-
-  if (useGasless) {
-    return getGaslessQuote(sellToken, buyToken, sellAmount, takerAddress, chainId);
-  } else {
-    return getPermit2Quote(sellToken, buyToken, sellAmount, takerAddress, chainId);
-  }
-}
-
-/**
- * Get token price from 0x API via backend proxy
- */
-export async function getTokenPrice(
-  sellToken: string,
-  buyToken: string,
-  sellAmount: string,
-  chainId: number = 1
-): Promise<any> {
-  const params = new URLSearchParams({
-    sellToken,
-    buyToken,
-    sellAmount,
-    chainId: chainId.toString()
-  });
-
-  const response = await fetch(`/api/0x/price?${params}`);
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || 'Failed to get token price');
-  }
-
-  const data = await response.json();
-
-  // CRITICAL: Log actual API response structure for interface creation
-  console.log('🔍 0x PERMIT2 PRICE RESPONSE STRUCTURE:', JSON.stringify(data, null, 2));
-
-  return data;
-}
-
-// Curated tokens per chain (fallback + guaranteed liquidity)
 export function getTokensForChain(chainId: number): Token[] {
   const tokenLists: Record<number, Token[]> = {
     // Ethereum Mainnet
@@ -784,6 +424,477 @@ export function getTokensForChain(chainId: number): Token[] {
   };
   
   return tokenLists[chainId] || tokenLists[1];
+}
+
+/**
+ * Fetches token metadata from various sources for given symbols and chain
+ */
+async function fetchTokenMetadata(symbols: string[], chainId: number): Promise<Token[]> {
+  try {
+    // Try to get token addresses from common token lists first
+    const tokenListUrl = getTokenListUrl(chainId);
+    if (tokenListUrl) {
+      const response = await fetchWithRetry(tokenListUrl);
+      if (response.ok) {
+        const data = await response.json();
+        const tokenArray = data.tokens || data;
+        
+        if (Array.isArray(tokenArray)) {
+          const foundTokens: Token[] = [];
+          const symbolsLower = symbols.map(s => s.toLowerCase());
+          
+          for (const token of tokenArray) {
+            if (token.chainId === chainId && symbolsLower.includes(token.symbol.toLowerCase())) {
+              foundTokens.push({
+                address: token.address,
+                symbol: token.symbol,
+                name: token.name,
+                decimals: token.decimals,
+                logoURI: token.logoURI || token.logoUri,
+                chainId: chainId,
+                supportsGasless: false // Will be updated later
+              });
+            }
+          }
+          
+          // If we found all symbols, return them
+          if (foundTokens.length === symbols.length) {
+            return foundTokens;
+          }
+        }
+      }
+    }
+    
+    // Fallback: Use curated tokens per chain as reference
+    const curatedTokens = getTokensForChain(chainId);
+    const foundTokens: Token[] = [];
+    
+    for (const symbol of symbols) {
+      const token = curatedTokens.find(t => t.symbol.toUpperCase() === symbol.toUpperCase());
+      if (token) {
+        foundTokens.push(token);
+      }
+    }
+    
+    return foundTokens;
+  } catch (error) {
+    console.error('Error fetching token metadata:', error);
+    return [];
+  }
+}
+
+/**
+ * Get token list URL for a specific chain
+ */
+function getTokenListUrl(chainId: number): string | undefined {
+  const TOKEN_LISTS: Record<number, string> = {
+    1: 'https://tokens.coingecko.com/uniswap/all.json',
+    137: 'https://api-polygon-tokens.polygon.technology/tokenlists/default.tokenlist.json',
+    42161: 'https://tokenlist.arbitrum.io/ArbTokenLists/arbed_arb_whitelist_era.json',
+    10: 'https://static.optimism.io/optimism.tokenlist.json',
+    8453: 'https://token-list.base.org',
+    56: 'https://tokens.pancakeswap.finance/pancakeswap-extended.json',
+  };
+  return TOKEN_LISTS[chainId];
+}
+
+/**
+ * Fetch popular tokens dynamically per chain with improved reliability and gasless support
+ * Optimized with: cache-first strategy, parallel API calls, stale-while-revalidate
+ */
+export async function fetchTokenList(chainId: number = 1): Promise<Token[]> {
+  console.log('⚡ Fetching tokens for chain:', chainId);
+
+  const tokenListUrl = TOKEN_LISTS[chainId];
+
+  if (!tokenListUrl) {
+    console.warn('No token list URL for chain:', chainId);
+    return getTokensForChain(chainId);
+  }
+
+  // 🚀 OPTIMIZATION 1: Cache-first strategy (stale-while-revalidate)
+  let cachedTokens: Token[] | null = null;
+  let cacheAge = Infinity;
+
+  try {
+    const cached = localStorage.getItem(`tokenList_${chainId}`);
+    const timestamp = localStorage.getItem(`tokenList_timestamp_${chainId}`);
+
+    if (cached && timestamp) {
+      cachedTokens = JSON.parse(cached);
+      cacheAge = Date.now() - parseInt(timestamp);
+      const maxCacheAge = 24 * 60 * 60 * 1000; // 24 hours
+
+        // Return cached immediately if fresh enough
+        if (cacheAge < maxCacheAge && cachedTokens) {
+          console.log(`✅ Using cached tokens (age: ${Math.round(cacheAge / 1000 / 60)}min)`);
+
+          // Revalidate in background if cache is older than 5 minutes
+          if (cacheAge > 5 * 60 * 1000) {
+            console.log('🔄 Revalidating in background...');
+            fetchTokenListFresh(chainId).catch(err =>
+              console.warn('Background revalidation failed:', err)
+            );
+          }
+
+          return cachedTokens;
+        }
+    }
+  } catch (cacheError) {
+    console.warn('Cache read failed:', cacheError);
+  }
+
+      // Filter tokens for the specific chain
+      const fetchedTokens = tokenArray
+        .filter((token: any) => {
+          // Some lists use chainId, others use chain
+          const tokenChainId = token.chainId || token.chain || chainId;
+          return tokenChainId === chainId;
+        })
+        .map((token: any) => ({
+          address: token.address,
+          symbol: token.symbol,
+          name: token.name,
+          decimals: token.decimals,
+          logoURI: token.logoURI || token.logoUri || token.icon,
+          chainId: chainId,
+        }))
+        .slice(0, 100); // Top 10
+
+      console.log(`Successfully processed ${fetchedTokens.length} tokens for chain ${chainId}`);
+
+      // Fetch gasless approval tokens for this chain
+      const gaslessApprovalTokens = await fetchGaslessApprovalTokens(chainId);
+      console.log(`Gasless approval tokens for chain ${chainId}:`, gaslessApprovalTokens);
+
+      // Augment tokens with gasless support flag
+      const tokensWithGaslessSupport = fetchedTokens.map(token => ({
+        ...token,
+        supportsGasless: gaslessApprovalTokens.some(gaslessAddr => 
+          gaslessAddr.toLowerCase() === token.address.toLowerCase()
+        ),
+      }));
+
+      console.log(`Successfully processed ${tokensWithGaslessSupport.length} tokens with gasless support info for chain ${chainId}`);
+
+      // Ensure main tokens are present without hardcoding
+      const tokensWithMainTokens = await ensureMainTokensPresent(tokensWithGaslessSupport, chainId);
+      console.log(`Successfully processed ${tokensWithMainTokens.length} tokens with main tokens ensured for chain ${chainId}`);
+
+      // Prioritize gasless tokens by filtering to show only gasless-supported tokens first
+      // This ensures the UI shows the most relevant tokens for gasless swaps
+      const prioritizedTokens = tokensWithMainTokens.filter(token => token.supportsGasless);
+      console.log(`Successfully filtered ${prioritizedTokens.length} gasless-supported tokens for chain ${chainId}`);
+      
+      // If no gasless tokens found, fall back to all tokens with gasless support info
+      const finalTokens = prioritizedTokens.length > 0 ? prioritizedTokens : tokensWithMainTokens;
+      console.log(`Final token list has ${finalTokens.length} tokens for chain ${chainId}`);
+
+      // Cache the successful response
+      try {
+        localStorage.setItem(`tokenList_${chainId}`, JSON.stringify(finalTokens));
+        localStorage.setItem(`tokenList_timestamp_${chainId}`, Date.now().toString());
+      } catch (cacheError) {
+        console.warn('Failed to cache token list:', cacheError);
+      }
+
+      return finalTokens;
+    }
+  } catch (error) {
+    console.error('Failed to fetch dynamic token list:', error);
+
+    // Try to use cached version before falling back
+    try {
+      const cachedTokens = localStorage.getItem(`tokenList_${chainId}`);
+      const cacheTimestamp = localStorage.getItem(`tokenList_timestamp_${chainId}`);
+
+      if (cachedTokens && cacheTimestamp) {
+        const cacheAge = Date.now() - parseInt(cacheTimestamp);
+        const maxCacheAge = 24 * 60 * 60 * 1000; // 24 hours
+
+        if (cacheAge < maxCacheAge) {
+          console.log('Using cached token list (age:', Math.round(cacheAge / 1000 / 60), 'minutes)');
+          return JSON.parse(cachedTokens);
+        } else {
+          console.log('Cached token list is too old, removing...');
+          localStorage.removeItem(`tokenList_${chainId}`);
+          localStorage.removeItem(`tokenList_timestamp_${chainId}`);
+        }
+      }
+    } catch (cacheError) {
+      console.warn('Cache read failed:', cacheError);
+    }
+
+    // Revalidate in background if cache is older than 5 minutes
+    const cacheAge = Date.now() - parseInt(localStorage.getItem(`tokenList_timestamp_${chainId}`) || '0');
+    if (cacheAge > 5 * 60 * 1000) {
+      console.log('🔄 Revalidating in background...');
+      fetchTokenListFresh(chainId).catch((err: any) =>
+        console.warn('Background revalidation failed:', err)
+      );
+    }
+
+    // Cache miss or expired - fetch fresh data
+    try {
+      const freshTokens = await fetchTokenListFresh(chainId);
+      return freshTokens;
+    } catch (error) {
+      console.error('Failed to fetch fresh token list:', error);
+
+      // Return stale cache if available
+      const staleCached = localStorage.getItem(`tokenList_${chainId}`);
+      if (staleCached) {
+        console.log('⚠️ Using stale cache as fallback');
+        return JSON.parse(staleCached);
+      }
+
+      // Last resort: curated list with gasless info
+      console.log('📋 Falling back to curated token list');
+      const fallbackTokens = getTokensForChain(chainId);
+      const gaslessTokens = await fetchGaslessApprovalTokens(chainId);
+
+      const tokensWithGaslessSupport = fallbackTokens.map(token => ({
+        ...token,
+        supportsGasless: gaslessTokens.some(addr =>
+          addr.toLowerCase() === token.address.toLowerCase()
+        ),
+      }));
+
+      // Prioritize gasless tokens in fallback as well
+      const prioritizedFallbackTokens = tokensWithGaslessSupport.filter(token => token.supportsGasless);
+      const finalFallbackTokens = prioritizedFallbackTokens.length > 0 ? prioritizedFallbackTokens : tokensWithGaslessSupport;
+      
+      // Cache the fallback response as well for consistency
+      try {
+        localStorage.setItem(`tokenList_${chainId}`, JSON.stringify(finalFallbackTokens));
+        localStorage.setItem(`tokenList_timestamp_${chainId}`, Date.now().toString());
+      } catch (cacheError) {
+        console.warn('Failed to cache fallback token list:', cacheError);
+      }
+      
+      return finalFallbackTokens;
+    }
+  }
+
+  // Fallback if everything else fails
+  return getTokensForChain(chainId);
+}
+
+/**
+ * Helper function to fetch fresh token list with parallel API calls
+ */
+async function fetchTokenListFresh(chainId: number): Promise<Token[]> {
+  const tokenListUrl = TOKEN_LISTS[chainId];
+
+  if (!tokenListUrl) {
+    throw new Error('No token list URL for chain');
+  }
+
+  console.log('🌐 Fetching fresh token list...');
+
+  // 🚀 OPTIMIZATION 2: Parallel API calls (tokens + gasless)
+  const [tokenResponse, gaslessTokens] = await Promise.all([
+    fetchWithRetry(tokenListUrl),
+    fetchGaslessApprovalTokens(chainId)
+  ]);
+
+  if (!tokenResponse.ok) {
+    throw new Error(`HTTP ${tokenResponse.status}: ${tokenResponse.statusText}`);
+  }
+
+  const data = await tokenResponse.json();
+  let tokenArray = data.tokens || data;
+
+  if (!Array.isArray(tokenArray)) {
+    throw new Error('Invalid token list format: expected array');
+  }
+
+  // 🐛 DEBUG: Log raw token array structure for debugging Base chain
+  if (chainId === 8453 || tokenArray.length < 10) {
+    console.log('🔍 Raw token array sample (first 3 tokens):', JSON.stringify(tokenArray.slice(0, 3), null, 2));
+    console.log('🔍 Total tokens in array:', tokenArray.length);
+  }
+
+  // Filter and map tokens for the specific chain
+  const fetchedTokens = tokenArray
+    .filter((token: any) => {
+      const tokenChainId = token.chainId || token.chain || chainId;
+      const matches = tokenChainId === chainId;
+
+      // 🐛 DEBUG: Log filtering for Base chain
+      if (chainId === 8453 && tokenArray.length < 20) {
+        console.log(`🔍 Token ${token.symbol}: chainId=${tokenChainId}, matches=${matches}`);
+      }
+
+      return matches;
+    })
+    .map((token: any) => ({
+      address: token.address,
+      symbol: token.symbol,
+      name: token.name,
+      decimals: token.decimals,
+      logoURI: token.logoURI || token.logoUri || token.icon,
+      chainId: chainId,
+      supportsGasless: gaslessTokens.some(addr =>
+        addr.toLowerCase() === token.address.toLowerCase()
+      ),
+    }))
+    .slice(0, 100);
+
+  console.log(`✅ Processed ${fetchedTokens.length} tokens with gasless info for chain ${chainId}`);
+
+  // Ensure main tokens are present
+  const tokensWithMainTokens = await ensureMainTokensPresent(fetchedTokens, chainId);
+
+  // Cache the successful response
+  try {
+    localStorage.setItem(`tokenList_${chainId}`, JSON.stringify(tokensWithMainTokens));
+    localStorage.setItem(`tokenList_timestamp_${chainId}`, Date.now().toString());
+    console.log('💾 Tokens cached successfully');
+  } catch (cacheError) {
+    console.warn('Failed to cache tokens:', cacheError);
+  }
+
+  return tokensWithMainTokens;
+}
+
+/**
+ * Search tokens by symbol or name
+ */
+export function searchTokens(tokens: Token[], query: string): Token[] {
+  if (!query) return tokens;
+  
+  const lowerQuery = query.toLowerCase();
+  return tokens.filter(token => 
+    token.symbol.toLowerCase().includes(lowerQuery) ||
+    token.name.toLowerCase().includes(lowerQuery) ||
+    token.address.toLowerCase().includes(lowerQuery)
+  );
+}
+
+/**
+ * Get a permit2 swap quote (for non-gasless tokens) from 0x API via backend proxy
+ */
+export async function getPermit2Quote(
+  sellToken: string,
+  buyToken: string,
+  sellAmount: string,
+  takerAddress: string,
+  chainId: number = 1
+): Promise<any> {
+  const params = new URLSearchParams({
+    sellToken,
+    buyToken,
+    sellAmount,
+    taker: takerAddress,
+    chainId: chainId.toString()
+  });
+
+  const response = await fetch(`/api/0x/permit2-quote?${params}`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to get permit2 quote');
+  }
+
+  const data = await response.json();
+
+  console.log('🔍 0x PERMIT2 QUOTE RESPONSE:', JSON.stringify(data, null, 2));
+
+  return data;
+}
+
+/**
+ * Get a gasless swap quote from 0x API via backend proxy (only for gasless tokens)
+ */
+export async function getGaslessQuote(
+  sellToken: string,
+  buyToken: string,
+  sellAmount: string,
+  takerAddress: string,
+  chainId: number = 1
+): Promise<any> {
+  const params = new URLSearchParams({
+    sellToken,
+    buyToken,
+    sellAmount,
+    taker: takerAddress,
+    chainId: chainId.toString()
+  });
+
+  const response = await fetch(`/api/0x/quote?${params}`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to get gasless quote');
+  }
+
+  const data = await response.json();
+
+  console.log('🔍 0x GASLESS QUOTE RESPONSE:', JSON.stringify(data, null, 2));
+
+  return data;
+}
+
+/**
+ * Get a swap quote - automatically chooses between gasless and permit2 based on token support
+ * This is the main function that should be used by the UI
+ */
+export async function getSwapQuote(
+  sellToken: string,
+  buyToken: string,
+  sellAmount: string,
+  takerAddress: string,
+  chainId: number = 1,
+  sellTokenSupportsGasless: boolean = false,
+  buyTokenSupportsGasless: boolean = false
+): Promise<any> {
+  // 🚀 SMART ROUTING: Use gasless endpoint only if BOTH tokens support gasless
+  const useGasless = sellTokenSupportsGasless && buyTokenSupportsGasless;
+
+  console.log(`🔀 Quote routing decision: ${useGasless ? 'GASLESS' : 'PERMIT2'}`, {
+    sellToken,
+    buyToken,
+    sellTokenSupportsGasless,
+    buyTokenSupportsGasless
+  });
+
+  if (useGasless) {
+    return getGaslessQuote(sellToken, buyToken, sellAmount, takerAddress, chainId);
+  } else {
+    return getPermit2Quote(sellToken, buyToken, sellAmount, takerAddress, chainId);
+  }
+}
+
+/**
+ * Get token price from 0x API via backend proxy
+ */
+export async function getTokenPrice(
+  sellToken: string,
+  buyToken: string,
+  sellAmount: string,
+  chainId: number = 1
+): Promise<any> {
+  const params = new URLSearchParams({
+    sellToken,
+    buyToken,
+    sellAmount,
+    chainId: chainId.toString()
+  });
+
+  const response = await fetch(`/api/0x/price?${params}`);
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to get token price');
+  }
+
+  const data = await response.json();
+
+  // CRITICAL: Log actual API response structure for interface creation
+  console.log('🔍 0x PERMIT2 PRICE RESPONSE STRUCTURE:', JSON.stringify(data, null, 2));
+
+  return data;
 }
 
 export const COMMON_TOKENS = getTokensForChain(1);
