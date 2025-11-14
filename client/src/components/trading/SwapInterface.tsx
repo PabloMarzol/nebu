@@ -33,15 +33,10 @@ export default function SwapInterface() {
           <CryptoSwapInterface />
         </TabsContent>
 
-<<<<<<< HEAD
-        {/* Fiat to Crypto Swap - Simplified to OnRamp Money only */}
-        <TabsContent value="fx" className="mt-0">
-          <OnRampMoneyWidget />
-=======
+
         {/* Fiat to Crypto Swap - OnRamp Money Integration */}
         <TabsContent value="fx" className="mt-0">
-          <ProviderSwapTabs defaultTab="onrampmoney" />
->>>>>>> d6aea94e8f211886155b80427b64130ee3695302
+          <OnRampMoneyWidget />
         </TabsContent>
       </Tabs>
     </div>

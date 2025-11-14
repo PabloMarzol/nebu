@@ -275,20 +275,20 @@ export async function fetchTokenList(chainId: number = 1): Promise<Token[]> {
       cacheAge = Date.now() - parseInt(timestamp);
       const maxCacheAge = 24 * 60 * 60 * 1000; // 24 hours
 
-      // Return cached immediately if fresh enough
-      if (cacheAge < maxCacheAge) {
-        console.log(`✅ Using cached tokens (age: ${Math.round(cacheAge / 1000 / 60)}min)`);
+        // Return cached immediately if fresh enough
+        if (cacheAge < maxCacheAge && cachedTokens) {
+          console.log(`✅ Using cached tokens (age: ${Math.round(cacheAge / 1000 / 60)}min)`);
 
-        // Revalidate in background if cache is older than 5 minutes
-        if (cacheAge > 5 * 60 * 1000) {
-          console.log('🔄 Revalidating in background...');
-          fetchTokenListFresh(chainId).catch(err =>
-            console.warn('Background revalidation failed:', err)
-          );
+          // Revalidate in background if cache is older than 5 minutes
+          if (cacheAge > 5 * 60 * 1000) {
+            console.log('🔄 Revalidating in background...');
+            fetchTokenListFresh(chainId).catch(err =>
+              console.warn('Background revalidation failed:', err)
+            );
+          }
+
+          return cachedTokens;
         }
-
-        return cachedTokens;
-      }
     }
   } catch (cacheError) {
     console.warn('Cache read failed:', cacheError);

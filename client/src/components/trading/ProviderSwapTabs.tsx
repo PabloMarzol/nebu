@@ -1,10 +1,6 @@
-import { useState } from 'react';
-<<<<<<< HEAD
-=======
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Globe, AlertCircle, Banknote } from "lucide-react";
->>>>>>> d6aea94e8f211886155b80427b64130ee3695302
+import { AlertCircle, Banknote } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWalletAuth } from "@/hooks/useWalletAuth";
 import OnRampMoneyWidget from '../fx-swap/OnRampMoneyWidget';
@@ -15,15 +11,9 @@ interface ProviderSwapTabsProps {
 
 export default function ProviderSwapTabs({ defaultTab = "onrampmoney" }: ProviderSwapTabsProps) {
   const { toast } = useToast();
-<<<<<<< HEAD
-  const { walletAddress, isAuthenticated } = useWalletAuth();
-
-  const handleProviderSuccess = (provider: string, data: any) => {
-=======
   const { isAuthenticated } = useWalletAuth();
 
   const handleSwapInitiated = (data: any) => {
->>>>>>> d6aea94e8f211886155b80427b64130ee3695302
     toast({
       title: "OnRamp Money Order Created",
       description: "Redirecting to payment...",
@@ -39,13 +29,6 @@ export default function ProviderSwapTabs({ defaultTab = "onrampmoney" }: Provide
   };
 
   return (
-<<<<<<< HEAD
-    <div className="space-y-6">
-      {/* Single OnRamp Money Widget */}
-      <OnRampMoneyWidget
-        onSwapInitiated={(data: any) => handleProviderSuccess('onrampmoney', data)}
-        onSwapError={(error: any) => handleProviderError('onrampmoney', error)}
-=======
     <div className="w-full max-w-md mx-auto">
       {/* Header Card */}
       <Card className="mb-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-slate-700">
@@ -81,7 +64,6 @@ export default function ProviderSwapTabs({ defaultTab = "onrampmoney" }: Provide
       <OnRampMoneyWidget
         onSwapInitiated={handleSwapInitiated}
         onSwapError={handleSwapError}
->>>>>>> d6aea94e8f211886155b80427b64130ee3695302
       />
     </div>
   );
