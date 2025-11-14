@@ -523,83 +523,88 @@ export async function fetchTokenList(chainId: number = 1): Promise<Token[]> {
     if (cached && timestamp) {
       cachedTokens = JSON.parse(cached);
       cacheAge = Date.now() - parseInt(timestamp);
-      const maxCacheAge = 24 * 60 * 60 * 1000; // 24 hours
+      const maxCacheAge = 24 * 60 * 1000; // 24 hours
 
-        // Return cached immediately if fresh enough
-        if (cacheAge < maxCacheAge && cachedTokens) {
-          console.log(`✅ Using cached tokens (age: ${Math.round(cacheAge / 1000 / 60)}min)`);
+      // Return cached immediately if fresh enough
+      if (cacheAge < maxCacheAge && cachedTokens) {
+        console.log(`✅ Using cached tokens (age: ${Math.round(cacheAge / 1000 / 60)}min)`);
 
-          // Revalidate in background if cache is older than 5 minutes
-          if (cacheAge > 5 * 60 * 1000) {
-            console.log('🔄 Revalidating in background...');
-            fetchTokenListFresh(chainId).catch(err =>
-              console.warn('Background revalidation failed:', err)
-            );
-          }
-
-          return cachedTokens;
+        // Revalidate in background if cache is older than 5 minutes
+        if (cacheAge > 5 * 60 * 1000) {
+          console.log('🔄 Revalidating in background...');
+          fetchTokenListFresh(chainId).catch(err =>
+            console.warn('Background revalidation failed:', err)
+          );
         }
-    }
-  } catch (cacheError) {
-    console.warn('Cache read failed:', cacheError);
-  }
 
-      // Filter tokens for the specific chain
-      const fetchedTokens = tokenArray
-        .filter((token: any) => {
-          // Some lists use chainId, others use chain
-          const tokenChainId = token.chainId || token.chain || chainId;
-          return tokenChainId === chainId;
-        })
-        .map((token: any) => ({
-          address: token.address,
-          symbol: token.symbol,
-          name: token.name,
-          decimals: token.decimals,
-          logoURI: token.logoURI || token.logoUri || token.icon,
-          chainId: chainId,
-        }))
-        .slice(0, 100); // Top 10
-
-      console.log(`Successfully processed ${fetchedTokens.length} tokens for chain ${chainId}`);
-
-      // Fetch gasless approval tokens for this chain
-      const gaslessApprovalTokens = await fetchGaslessApprovalTokens(chainId);
-      console.log(`Gasless approval tokens for chain ${chainId}:`, gaslessApprovalTokens);
-
-      // Augment tokens with gasless support flag
-      const tokensWithGaslessSupport = fetchedTokens.map(token => ({
-        ...token,
-        supportsGasless: gaslessApprovalTokens.some(gaslessAddr => 
-          gaslessAddr.toLowerCase() === token.address.toLowerCase()
-        ),
-      }));
-
-      console.log(`Successfully processed ${tokensWithGaslessSupport.length} tokens with gasless support info for chain ${chainId}`);
-
-      // Ensure main tokens are present without hardcoding
-      const tokensWithMainTokens = await ensureMainTokensPresent(tokensWithGaslessSupport, chainId);
-      console.log(`Successfully processed ${tokensWithMainTokens.length} tokens with main tokens ensured for chain ${chainId}`);
-
-      // Prioritize gasless tokens by filtering to show only gasless-supported tokens first
-      // This ensures the UI shows the most relevant tokens for gasless swaps
-      const prioritizedTokens = tokensWithMainTokens.filter(token => token.supportsGasless);
-      console.log(`Successfully filtered ${prioritizedTokens.length} gasless-supported tokens for chain ${chainId}`);
-      
-      // If no gasless tokens found, fall back to all tokens with gasless support info
-      const finalTokens = prioritizedTokens.length > 0 ? prioritizedTokens : tokensWithMainTokens;
-      console.log(`Final token list has ${finalTokens.length} tokens for chain ${chainId}`);
-
-      // Cache the successful response
-      try {
-        localStorage.setItem(`tokenList_${chainId}`, JSON.stringify(finalTokens));
-        localStorage.setItem(`tokenList_timestamp_${chainId}`, Date.now().toString());
-      } catch (cacheError) {
-        console.warn('Failed to cache token list:', cacheError);
+        return cachedTokens;
       }
-
-      return finalTokens;
     }
+
+    // Fetch fresh token list data
+    const response = await fetchWithRetry(tokenListUrl);
+    const data = await response.json();
+    let tokenArray = data.tokens || data;
+
+    if (!Array.isArray(tokenArray)) {
+      throw new Error('Invalid token list format: expected array');
+    }
+
+    // Filter tokens for the specific chain
+    const fetchedTokens = tokenArray
+      .filter((token: any) => {
+        // Some lists use chainId, others use chain
+        const tokenChainId = token.chainId || token.chain || chainId;
+        return tokenChainId === chainId;
+      })
+      .map((token: any) => ({
+        address: token.address,
+        symbol: token.symbol,
+        name: token.name,
+        decimals: token.decimals,
+        logoURI: token.logoURI || token.logoUri || token.icon,
+        chainId: chainId,
+      }))
+      .slice(0, 100); // Top 10
+
+    console.log(`Successfully processed ${fetchedTokens.length} tokens for chain ${chainId}`);
+
+    // Fetch gasless approval tokens for this chain
+    const gaslessApprovalTokens = await fetchGaslessApprovalTokens(chainId);
+    console.log(`Gasless approval tokens for chain ${chainId}:`, gaslessApprovalTokens);
+
+    // Augment tokens with gasless support flag
+    const tokensWithGaslessSupport = fetchedTokens.map(token => ({
+      ...token,
+      supportsGasless: gaslessApprovalTokens.some(gaslessAddr => 
+        gaslessAddr.toLowerCase() === token.address.toLowerCase()
+      ),
+    }));
+
+    console.log(`Successfully processed ${tokensWithGaslessSupport.length} tokens with gasless support info for chain ${chainId}`);
+
+    // Ensure main tokens are present without hardcoding
+    const tokensWithMainTokens = await ensureMainTokensPresent(tokensWithGaslessSupport, chainId);
+    console.log(`Successfully processed ${tokensWithMainTokens.length} tokens with main tokens ensured for chain ${chainId}`);
+
+    // Prioritize gasless tokens by filtering to show only gasless-supported tokens first
+    // This ensures the UI shows the most relevant tokens for gasless swaps
+    const prioritizedTokens = tokensWithMainTokens.filter(token => token.supportsGasless);
+    console.log(`Successfully filtered ${prioritizedTokens.length} gasless-supported tokens for chain ${chainId}`);
+    
+    // If no gasless tokens found, fall back to all tokens with gasless support info
+    const finalTokens = prioritizedTokens.length > 0 ? prioritizedTokens : tokensWithMainTokens;
+    console.log(`Final token list has ${finalTokens.length} tokens for chain ${chainId}`);
+
+    // Cache the successful response
+    try {
+      localStorage.setItem(`tokenList_${chainId}`, JSON.stringify(finalTokens));
+      localStorage.setItem(`tokenList_timestamp_${chainId}`, Date.now().toString());
+    } catch (cacheError) {
+      console.warn('Failed to cache token list:', cacheError);
+    }
+
+    return finalTokens;
   } catch (error) {
     console.error('Failed to fetch dynamic token list:', error);
 

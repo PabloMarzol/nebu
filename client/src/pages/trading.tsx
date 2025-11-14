@@ -278,10 +278,10 @@ export default function Trading() {
 
   return (
     <div className="min-h-screen page-content">
-      <div className="w-full">
+      <div className="w-full min-w-0">
         {/* Risk Disclosure Banner */}
         {showRiskBanner && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6 relative">
+          <div className="bg-red-50/10 border-red-50/30 rounded-lg p-4 mb-6 relative z-10">
             <div className="flex items-start space-x-3">
               <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
@@ -290,7 +290,7 @@ export default function Trading() {
                 </p>
                 <div className="flex flex-wrap gap-2 mt-2">
                   <Link href="/risk-disclosure">
-                    <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300 h-6 px-2">
+                    <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-30 h-6 px-2">
                       Read Full Risk Disclosure
                     </Button>
                   </Link>
@@ -323,15 +323,15 @@ export default function Trading() {
         </div>
 
         {/* Comprehensive Trading Platform - Remove max-width constraint for trading sections */}
-        <Tabs defaultValue="trading" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 glass text-sm">
+        <Tabs defaultValue="trading" className="w-full overflow-visible">
+          <TabsList className="grid w-full grid-cols-4 glass text-sm z-[100]">
             <TabsTrigger value="trading">Trading</TabsTrigger>
             <TabsTrigger value="swap">Swap</TabsTrigger>
             <TabsTrigger value="portfolio">AI Portfolio</TabsTrigger>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="trading" className="space-y-6">
+          <TabsContent value="trading" className="space-y-6 overflow-visible relative z-[100]">
             <ProtectedTradingWrapper feature="trading">
               {/* Trading Type Selector */}
               <Card className="glass">
@@ -414,9 +414,9 @@ export default function Trading() {
 
             {/* 🚀 NEW: Professional Trading Layout with CSS Grid */}
             {selectedTradingType === "spot" && (
-              <div className="trading-layout-grid">
+              <div className="trading-layout-grid relative z-[100]">
                 {/* HEADER: Trading Type + Market Stats */}
-                <div className="trading-header">
+                <div className="trading-header relative z-[100]">
                   <div className="flex items-center justify-between flex-wrap gap-4">
                     <div className="flex items-center gap-4">
                       <h2 className="text-xl font-bold text-white">Spot Trading</h2>
@@ -446,27 +446,27 @@ export default function Trading() {
                 </div>
 
                 {/* CHART AREA: TradingChart Component */}
-                <div className="chart-area">
+                <div className="chart-area relative z-[100]">
                   <div className="chart-container">
                     <TradingChart symbol="BTC/USDT" />
                   </div>
                 </div>
 
                 {/* SIDEBAR: OrderBook + QuickTrade Panel */}
-                <div className="trading-sidebar">
+                <div className="trading-sidebar relative z-[100]">
                   {/* OrderBook - Top Half */}
-                  <div className="sidebar-orderbook">
+                  <div className="sidebar-orderbook relative z-[100]">
                     <OrderBook symbol="BTC/USDT" />
                   </div>
 
                   {/* QuickTrade Panel - Bottom Half */}
-                  <div className="sidebar-trade-panel">
+                  <div className="sidebar-trade-panel relative z-[100]">
                     <HyperliquidTradingPanel tradingMode="spot" />
                   </div>
                 </div>
 
                 {/* BOTTOM: Positions/Orders Tabs */}
-                <div className="trading-bottom">
+                <div className="trading-bottom relative z-[100]">
                   <TradingDashboard tradingMode="spot" selectedPair="BTC/USDT" />
                 </div>
               </div>
@@ -474,9 +474,9 @@ export default function Trading() {
 
             {/* 🚀 NEW: Futures Trading Layout with CSS Grid */}
             {selectedTradingType === "futures" && (
-              <div className="trading-layout-grid">
+              <div className="trading-layout-grid relative z-[100]">
                 {/* HEADER: Futures Info + Market Stats */}
-                <div className="trading-header">
+                <div className="trading-header relative z-[100]">
                   <div className="flex items-center justify-between flex-wrap gap-4">
                     <div className="flex items-center gap-4">
                       <h2 className="text-xl font-bold text-white">Perpetual Futures</h2>
@@ -503,27 +503,27 @@ export default function Trading() {
                 </div>
 
                 {/* CHART AREA: TradingChart Component */}
-                <div className="chart-area">
+                <div className="chart-area relative z-[100]">
                   <div className="chart-container">
                     <TradingChart symbol="BTC-PERP" />
                   </div>
                 </div>
 
                 {/* SIDEBAR: OrderBook + QuickTrade Panel */}
-                <div className="trading-sidebar">
+                <div className="trading-sidebar relative z-[100]">
                   {/* OrderBook - Top Half */}
-                  <div className="sidebar-orderbook">
+                  <div className="sidebar-orderbook relative z-[100]">
                     <OrderBook symbol="BTC-PERP" />
                   </div>
 
                   {/* QuickTrade Panel - Bottom Half */}
-                  <div className="sidebar-trade-panel">
+                  <div className="sidebar-trade-panel relative z-[100]">
                     <HyperliquidTradingPanel tradingMode="futures" />
                   </div>
                 </div>
 
                 {/* BOTTOM: Positions/Orders Tabs */}
-                <div className="trading-bottom">
+                <div className="trading-bottom relative z-[100]">
                   <TradingDashboard tradingMode="futures" selectedPair="BTC-PERP" />
                 </div>
               </div>
@@ -570,7 +570,7 @@ export default function Trading() {
           </TabsContent>
 
           {/* 🆕 UNCHANGED: Swap tab still uses 0x Protocol */}
-          <TabsContent value="swap" className="space-y-6 swap-tab-content">
+          <TabsContent value="swap" className="space-y-6 swap-tab-content overflow-visible relative z-[100]">
             <ProtectedTradingWrapper feature="trading">
               <div className="mb-6">
                 <Card className="glass">
@@ -582,8 +582,8 @@ export default function Trading() {
               </div>
               
               {/* Centered Swap Interface - Fixed container */}
-              <div className="flex justify-center mb-6 swap-interface-container">
-                <div className="w-full max-w-md swap-interface-wrapper">
+              <div className="flex justify-center mb-6 swap-interface-container relative z-[100]">
+                <div className="w-full max-w-md swap-interface-wrapper relative z-[100]">
                   <SwapInterface />
                 </div>
               </div>
@@ -606,23 +606,23 @@ export default function Trading() {
             </ProtectedTradingWrapper>
           </TabsContent>
 
-          <TabsContent value="enhanced" className="space-y-6">
+          <TabsContent value="enhanced" className="space-y-6 overflow-visible relative z-[100]">
             <ProtectedTradingWrapper feature="trading">
               <EnhancedTradingInterface />
             </ProtectedTradingWrapper>
           </TabsContent>
 
-          <TabsContent value="portfolio" className="space-y-6">
+          <TabsContent value="portfolio" className="space-y-6 overflow-visible relative z-[100]">
             <ProtectedTradingWrapper feature="trading">
               <PortfolioBalanceDisplay />
             </ProtectedTradingWrapper>
           </TabsContent>
 
-          <TabsContent value="social" className="space-y-6">
+          <TabsContent value="social" className="space-y-6 overflow-visible relative z-[100]">
             <SocialTradingCommunity />
           </TabsContent>
 
-          <TabsContent value="learning" className="space-y-6">
+          <TabsContent value="learning" className="space-y-6 overflow-visible relative z-[100]">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <PersonalizedLearningPath />
@@ -634,18 +634,18 @@ export default function Trading() {
             <PersonalizedLearning />
           </TabsContent>
 
-          <TabsContent value="nft" className="space-y-6">
+          <TabsContent value="nft" className="space-y-6 overflow-visible relative z-[100]">
             <NFTMarketplace />
           </TabsContent>
 
-          <TabsContent value="voice" className="space-y-6">
+          <TabsContent value="voice" className="space-y-6 overflow-visible relative z-[100]">
             <VoiceTradingCommands />
           </TabsContent>
 
-          <TabsContent value="dashboard" className="space-y-6">
+          <TabsContent value="dashboard" className="space-y-6 overflow-visible relative z-[100]">
             <ProtectedTradingWrapper feature="trading">
               {/* 🆕 NEW: Integrated Recovery Dashboard with Wallet & Recent Swaps */}
-              <div className="space-y-6">
+              <div className="space-y-6 relative z-[100]">
                 {/* Dashboard Header */}
                 <Card className="glass">
                   <CardContent className="p-6">
@@ -689,11 +689,11 @@ export default function Trading() {
             </ProtectedTradingWrapper>
           </TabsContent>
 
-          <TabsContent value="api" className="space-y-6">
+          <TabsContent value="api" className="space-y-6 overflow-visible relative z-[100]">
             <APIServicesDashboard />
           </TabsContent>
 
-          <TabsContent value="tools" className="space-y-6">
+          <TabsContent value="tools" className="space-y-6 overflow-visible relative z-[100]">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <CryptoMemeGenerator />
@@ -704,7 +704,7 @@ export default function Trading() {
             </div>
           </TabsContent>
 
-          <TabsContent value="mood" className="space-y-6">
+          <TabsContent value="mood" className="space-y-6 overflow-visible relative z-[100]">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <MarketMoodTranslator />
@@ -715,12 +715,12 @@ export default function Trading() {
             </div>
           </TabsContent>
 
-          <TabsContent value="insights" className="space-y-6">
+          <TabsContent value="insights" className="space-y-6 overflow-visible relative z-[100]">
             <SocialSharingWidget />
           </TabsContent>
 
           {/* 🆕 UNCHANGED: P2P tab still uses 0x Protocol */}
-          <TabsContent value="p2p" className="space-y-6">
+          <TabsContent value="p2p" className="space-y-6 overflow-visible relative z-[100]">
             <ProtectedTradingWrapper feature="p2p">
               <P2PTrading />
             </ProtectedTradingWrapper>
