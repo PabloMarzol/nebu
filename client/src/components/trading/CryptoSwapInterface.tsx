@@ -56,9 +56,19 @@ export default function CryptoSwapInterface() {
   const [isTokenPickerOpen, setIsTokenPickerOpen] = useState(false);
   const [tokenPickerMode, setTokenPickerMode] = useState<'sell' | 'buy'>('sell');
   const [tokenSearchQuery, setTokenSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [showGaslessOnly, setShowGaslessOnly] = useState(false);
-  
+
   const currentChain = getChainById(chainId);
+
+  // 🚀 OPTIMIZATION 3: Debounced search (300ms delay)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(tokenSearchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [tokenSearchQuery]);
   
   // Load tokens when chain changes
   useEffect(() => {
@@ -284,10 +294,12 @@ export default function CryptoSwapInterface() {
           buyToken!.address,
           sellAmountWei,
           walletAddress,
-          chainId
+          chainId,
+          sellToken.supportsGasless || false,
+          buyToken!.supportsGasless || false
         );
         setQuote(updatedQuote);
-        
+
         // Clear error if allowance is now sufficient
         if (!updatedQuote.issues?.allowance) {
           setError(null);
@@ -319,12 +331,15 @@ export default function CryptoSwapInterface() {
     try {
       const sellAmountWei = (parseFloat(sellAmount) * Math.pow(10, sellToken.decimals)).toString();
       
+      // 🚀 FIX: Pass gasless support flags to use correct endpoint
       const swapQuote = await getSwapQuote(
         sellToken.address,
         buyToken.address,
         sellAmountWei,
         walletAddress,
-        chainId
+        chainId,
+        sellToken.supportsGasless || false,
+        buyToken.supportsGasless || false
       );
       
       // Log the received swap quote for debugging
@@ -447,7 +462,8 @@ export default function CryptoSwapInterface() {
     }
   };
 
-  const filteredTokens = searchTokens(allTokens, tokenSearchQuery)
+  // 🚀 Use debounced query for filtering to prevent UI lag
+  const filteredTokens = searchTokens(allTokens, debouncedSearchQuery)
     .filter(token => !showGaslessOnly || token.supportsGasless);
 
   return (

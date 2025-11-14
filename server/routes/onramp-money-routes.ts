@@ -29,7 +29,7 @@ router.post('/create-order', requireAuth, async (req: Request, res: Response) =>
     } = req.body;
 
     // Get user ID from authenticated session
-    const userId = (req as any).userId;
+    const userId = (req as any).user?.id;
 
     if (!userId) {
       return res.status(401).json({
@@ -108,48 +108,120 @@ router.post('/create-order', requireAuth, async (req: Request, res: Response) =>
 });
 
 /**
- * Handle OnRamp Money Webhook/Redirect
- * Processes the redirect callback from OnRamp Money after transaction
+ * Handle OnRamp Money Redirect Callback (User redirect after payment)
  * GET /api/onramp-money/callback
  */
 router.get('/callback', async (req: Request, res: Response) => {
   try {
     const { orderId, status } = req.query;
 
-    if (!orderId || !status) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing orderId or status in callback'
-      });
-    }
-
-    console.log('[OnRamp Money] Received callback:', {
+    console.log('[OnRamp Money] Received redirect callback:', {
       orderId,
       status
     });
 
-    // Update order status
-    const result = await onRampMoneyService.handleWebhook(
-      orderId as string,
-      status as string
-    );
-
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-
     // Redirect to frontend with status
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5000';
-    const redirectUrl = `${frontendUrl}/fx-swap?onramp_order=${orderId}&status=${status}`;
 
+    if (!orderId || !status) {
+      return res.redirect(`${frontendUrl}/fx-swap?error=missing_params`);
+    }
+
+    const redirectUrl = `${frontendUrl}/fx-swap?onramp_order=${orderId}&status=${status}`;
     return res.redirect(redirectUrl);
 
   } catch (error: any) {
-    console.error('[OnRamp Money] Callback error:', error);
+    console.error('[OnRamp Money] Redirect callback error:', error);
 
     // Redirect to frontend with error
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5000';
     return res.redirect(`${frontendUrl}/fx-swap?error=callback_failed`);
+  }
+});
+
+/**
+ * Handle OnRamp Money Webhook (Server-to-server notification)
+ * POST /api/onramp-money/webhook
+ */
+router.post('/webhook', async (req: Request, res: Response) => {
+  try {
+    // Get signature and payload from headers
+    const payload = req.headers['x-onramp-payload'] as string;
+    const signature = req.headers['x-onramp-signature'] as string;
+
+    if (!payload || !signature) {
+      console.error('[OnRamp Money] Webhook missing required headers');
+      return res.status(400).json({
+        success: false,
+        error: 'Missing x-onramp-payload or x-onramp-signature headers'
+      });
+    }
+
+    // Verify webhook signature
+    const isValid = onRampMoneyService.verifyWebhookSignature(payload, signature);
+
+    if (!isValid) {
+      console.error('[OnRamp Money] Webhook signature verification failed');
+      return res.status(403).json({
+        success: false,
+        error: 'Invalid signature'
+      });
+    }
+
+    // Parse webhook data
+    let webhookData;
+    try {
+      webhookData = JSON.parse(payload);
+    } catch (parseError) {
+      console.error('[OnRamp Money] Failed to parse webhook payload:', parseError);
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid JSON payload'
+      });
+    }
+
+    console.log('[OnRamp Money] Received valid webhook:', {
+      orderId: webhookData.orderId,
+      status: webhookData.status,
+      statusDescription: webhookData.statusDescription,
+      merchantRecognitionId: webhookData.merchantRecognitionId
+    });
+
+    // Map OnRamp status codes to our status
+    // Status codes: 6,14,40 = completed, 7,15,41 = webhook sent, others = pending/processing
+    let ourStatus = 'pending';
+    if ([6, 14, 15, 19, 40, 41].includes(webhookData.status)) {
+      ourStatus = 'success';
+    } else if ([-4, -2, -1].includes(webhookData.status)) {
+      ourStatus = 'failed';
+    }
+
+    // Update order in database
+    const result = await onRampMoneyService.handleWebhook(
+      webhookData.orderId?.toString() || webhookData.merchantRecognitionId,
+      ourStatus
+    );
+
+    if (!result.success) {
+      console.error('[OnRamp Money] Failed to update order:', result.error);
+      return res.status(500).json(result);
+    }
+
+    console.log('[OnRamp Money] Webhook processed successfully');
+
+    // Return success response within 5 seconds as required
+    return res.status(200).json({
+      success: true,
+      message: 'Webhook processed successfully'
+    });
+
+  } catch (error: any) {
+    console.error('[OnRamp Money] Webhook processing error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      message: error.message
+    });
   }
 });
 
@@ -192,7 +264,7 @@ router.get('/order/:identifier', requireAuth, async (req: Request, res: Response
  */
 router.get('/orders', requireAuth, async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).userId;
+    const userId = (req as any).user?.id;
 
     if (!userId) {
       return res.status(401).json({

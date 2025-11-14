@@ -11,6 +11,7 @@
     "db:push": "drizzle-kit push",
     "prepare": "husky install",
     "migrate": "node db_migration.js",
+    "partial-migrate": "node run-migration.js",
     "deploy": "node scripts/deploy-minimal.js",
     "deploy:prod": "cross-env NODE_ENV=production node scripts/deploy-minimal.js",
     "build:prod": "cross-env NODE_ENV=production npm run build",
