@@ -182,19 +182,23 @@ export async function getHyperliquidAllMids(isTestnet = false) {
 
 /**
  * Create exchange client for trading (requires wallet connection)
+ * IMPORTANT: This now requires the user's wallet address to be passed
  */
-export function createHyperliquidExchangeClient(isTestnet = false) {
+export async function createHyperliquidExchangeClient(walletAddress: Address, isTestnet = false) {
   if (!window.ethereum) {
     throw new Error('MetaMask not detected');
   }
-  
-  // Create viem wallet client for MetaMask
+
+  console.log('🔐 Creating Hyperliquid exchange client for wallet:', walletAddress);
+
+  // Create viem wallet client with account specified
   const walletClient = createWalletClient({
+    account: walletAddress,
     transport: custom(window.ethereum),
   });
-  
+
   const transport = new hl.HttpTransport({ isTestnet, timeout: 10000 });
-  
+
   return new hl.ExchangeClient({
     wallet: walletClient,
     transport,
@@ -313,6 +317,7 @@ export async function switchToHyperliquidNetwork(isTestnet = false) {
  * This allows any user to trade with their own wallet without backend custody
  */
 export async function placeOrderWithWallet(params: {
+  walletAddress: Address;
   symbol: string;
   side: 'buy' | 'sell';
   amount: number;
@@ -325,7 +330,7 @@ export async function placeOrderWithWallet(params: {
     console.log('📝 Placing order with user wallet...', params);
 
     // Create exchange client with user's MetaMask
-    const exchangeClient = createHyperliquidExchangeClient(params.isTestnet);
+    const exchangeClient = await createHyperliquidExchangeClient(params.walletAddress, params.isTestnet);
 
     // Initialize info client for metadata
     initializeClients(params.isTestnet);
