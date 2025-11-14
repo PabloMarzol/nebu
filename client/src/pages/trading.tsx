@@ -69,7 +69,7 @@ function EnhancedTradingHeader({ tradingMode, selectedPair, onPairChange }: {
     <div className="bg-[#0b0e11] border border-slate-800 rounded-lg p-4">
       <div className="flex items-center justify-between">
         {/* Pair Selector */}
-        <div className="relative">
+        <div className="relative dropdown-container">
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             className="flex items-center space-x-3 px-4 py-2 bg-[#1a1d24] rounded-lg border border-slate-700 hover:bg-slate-800 transition-colors"
@@ -81,9 +81,9 @@ function EnhancedTradingHeader({ tradingMode, selectedPair, onPairChange }: {
             </div>
             <ChevronDown className="w-4 h-4 text-[#e5e5e5]" />
           </button>
-          
+
           {isDropdownOpen && (
-            <div className="absolute top-full left-0 mt-2 w-64 bg-[#0b0e11] border border-slate-800 rounded-lg shadow-xl z-50">
+            <div className="dropdown-menu absolute top-full left-0 mt-2 w-64 bg-[#0b0e11] border border-slate-800 rounded-lg shadow-xl z-[9999]">
               {availablePairs.map((pair) => (
                 <button
                   key={pair.symbol}
@@ -334,11 +334,11 @@ export default function Trading() {
           <TabsContent value="trading" className="space-y-6">
             <ProtectedTradingWrapper feature="trading">
               {/* Trading Type Selector */}
-              <Card className="glass relative">
+              <Card className="glass">
                 <CardContent className="p-4">
-                  <div className="flex items-center space-x-4 relative z-10">
+                  <div className="flex items-center space-x-4">
                     <Label className="font-semibold">Trading Type:</Label>
-                    <div className="relative" ref={dropdownRef}>
+                    <div className="relative dropdown-container" ref={dropdownRef}>
                       {/* Custom Trading Type Dropdown */}
                       <button
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -360,10 +360,10 @@ export default function Trading() {
                         </div>
                         <ChevronDown className="h-4 w-4 opacity-50" />
                       </button>
-                      
+
                       {/* Custom Dropdown Menu */}
                       {isDropdownOpen && (
-                        <div className="absolute top-full left-0 mt-1 w-[180px] z-50 bg-slate-900 border border-slate-700 rounded-md shadow-xl overflow-hidden">
+                        <div className="dropdown-menu absolute top-full left-0 mt-1 w-[180px] z-[9999] bg-slate-900 border border-slate-700 rounded-md shadow-xl overflow-hidden">
                           <div
                             className="px-3 py-2 text-sm cursor-pointer hover:bg-slate-800 flex items-center space-x-2"
                             onClick={() => {

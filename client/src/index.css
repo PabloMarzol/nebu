@@ -1116,7 +1116,7 @@ nav[class*="fixed"] {
   }
 }
 
-/* Nuclear reset for crisp text */
+/* Nuclear reset for crisp text - EXCLUDE DROPDOWNS */
 * {
   margin: 0;
   padding: 0;
@@ -1124,6 +1124,10 @@ nav[class*="fixed"] {
   -webkit-font-smoothing: antialiased !important;
   -moz-osx-font-smoothing: grayscale !important;
   text-rendering: optimizeLegibility !important;
+}
+
+/* CRITICAL: Exclude dropdown menus from transform/filter resets */
+*:not(.dropdown-menu):not(.dropdown-container):not(.dropdown-container *):not([role="dialog"]):not([data-radix-dialog-content]):not([data-radix-dropdown-menu-content]):not([data-radix-select-content]):not([data-radix-popper-content-wrapper]) {
   transform: none !important;
   filter: none !important;
   will-change: auto !important;
@@ -2270,4 +2274,57 @@ body[data-radix-dialog-open] {
   margin: 0 !important;
   padding: 0 !important;
   box-sizing: border-box !important;
+}
+
+/* ========================================
+   DROPDOWN MENU FIXES - Critical for Trading Page
+   ======================================== */
+
+/* Ensure dropdown containers have proper positioning context */
+.dropdown-container {
+  position: relative !important;
+  z-index: 1 !important;
+  overflow: visible !important;
+  contain: none !important;
+  isolation: auto !important;
+}
+
+/* Dropdown menus should be positioned absolutely with high z-index */
+.dropdown-menu {
+  position: absolute !important;
+  z-index: 9999 !important;
+  contain: none !important;
+  isolation: auto !important;
+  transform: translateZ(0) !important; /* Enable hardware acceleration */
+  will-change: transform, opacity !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure parent containers don't clip dropdowns */
+.page-content,
+[data-radix-tabs-content],
+.swap-tab-content,
+.glass,
+.card {
+  overflow: visible !important;
+  contain: none !important;
+}
+
+/* Override max-width container to allow dropdowns to escape */
+.max-w-7xl {
+  overflow: visible !important;
+  contain: none !important;
+}
+
+/* Ensure Tabs don't clip content */
+[data-radix-tabs-content] {
+  position: static !important;
+  overflow: visible !important;
+  contain: none !important;
+  isolation: auto !important;
+}
+
+/* Fix for any Cards containing dropdowns */
+.glass.relative {
+  overflow: visible !important;
 }
