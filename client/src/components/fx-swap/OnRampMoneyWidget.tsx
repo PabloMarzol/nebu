@@ -51,7 +51,7 @@ const OnRampMoneyWidget: React.FC<OnRampMoneyWidgetProps> = ({
   const [fiatAmount, setFiatAmount] = useState<string>('');
   const [fiatCurrency, setFiatCurrency] = useState<string>('INR');
   const [cryptoCurrency, setCryptoCurrency] = useState<string>('usdt');
-  const [network, setNetwork] = useState<string>('matic20');
+  const [network, setNetwork] = useState<string>('bsc-testnet');
   const [destinationWallet, setDestinationWallet] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('1'); // 1=Instant, 2=Bank
   const [phoneNumber, setPhoneNumber] = useState<string>('');
@@ -104,17 +104,17 @@ const OnRampMoneyWidget: React.FC<OnRampMoneyWidgetProps> = ({
     }
   }, [walletAddress]);
 
-  // Update available networks when crypto changes
-  useEffect(() => {
-    const selectedCrypto = cryptos.find(c => c.coin === cryptoCurrency);
-    if (selectedCrypto) {
-      setAvailableNetworks(selectedCrypto.networks);
-      // Reset network to first available if current not supported
-      if (!selectedCrypto.networks.includes(network)) {
-        setNetwork(selectedCrypto.networks[0] || 'matic20');
-      }
-    }
-  }, [cryptoCurrency, cryptos]);
+      // Update available networks when crypto changes
+      useEffect(() => {
+        const selectedCrypto = cryptos.find(c => c.coin === cryptoCurrency);
+        if (selectedCrypto) {
+          setAvailableNetworks(selectedCrypto.networks);
+          // Reset network to first available if current not supported
+          if (!selectedCrypto.networks.includes(network)) {
+            setNetwork(selectedCrypto.networks[0] || 'bsc-testnet');
+          }
+        }
+      }, [cryptoCurrency, cryptos]);
 
   // Handle form submission
   const handleProceed = async () => {
@@ -141,6 +141,7 @@ const OnRampMoneyWidget: React.FC<OnRampMoneyWidgetProps> = ({
     try {
       const response = await fetch('/api/onramp-money/create-order', {
         method: 'POST',
+        credentials: 'include', // Include session cookie for authentication
         headers: {
           'Content-Type': 'application/json',
         },
@@ -193,7 +194,7 @@ const OnRampMoneyWidget: React.FC<OnRampMoneyWidgetProps> = ({
             <div>
               <CardTitle className="flex items-center gap-2 text-xl">
                 <Globe className="w-5 h-5 text-blue-400" />
-                OnRamp Money
+                NebulaX OnRamp
               </CardTitle>
               <CardDescription className="mt-1">
                 Buy crypto with fiat using instant payment methods
@@ -367,7 +368,8 @@ const OnRampMoneyWidget: React.FC<OnRampMoneyWidgetProps> = ({
           <Button
             onClick={handleProceed}
             disabled={!isAuthenticated || loading || !fiatAmount || !destinationWallet}
-            className="w-full h-12 text-base font-semibold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+            className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+            size="lg"
           >
             {loading ? (
               <>

@@ -1,12 +1,16 @@
 import crypto from 'crypto';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // OnRamp Money Configuration
 interface OnRampMoneyConfig {
-  appId: string; // 1 for production, 2 for sandbox
-  isProduction: boolean;
+  appId: string;
+  apiKey: string; // For webhook signature verification
   baseUrl: string;
+  isProduction: boolean;
 }
 
 // Fiat currency mapping
@@ -41,7 +45,8 @@ export const SUPPORTED_NETWORKS = [
   'bep20',
   'matic20',
   'erc20',
-  'trc20'
+  'trc20',
+  'bsc-testnet'
 ] as const;
 
 // Supported languages
@@ -106,12 +111,53 @@ interface WebhookPayload {
 export class OnRampMoneyService {
   private config: OnRampMoneyConfig;
 
-  constructor(isProduction: boolean = false) {
+  constructor() {
+    // Read from environment variables
+    const appId = process.env.ONRAMP_APP_ID || '2'; // Default to sandbox
+    const apiKey = process.env.ONRAMP_API_KEY || '';
+    const baseUrl = process.env.ONRAMP_BASE_URL || 'https://onramp.money';
+
     this.config = {
-      appId: isProduction ? '1' : '2', // Use appId=2 for sandbox
-      isProduction,
-      baseUrl: 'https://onramp.money'
+      appId,
+      apiKey,
+      baseUrl: baseUrl.split('?')[0], // Extract base URL without query params
+      isProduction: appId !== '2'
     };
+
+    console.log('[OnRamp Money] Initialized with appId:', appId);
+  }
+
+  /**
+   * Verify webhook signature using HMAC-SHA512
+   * @param payload - The webhook payload as string
+   * @param signature - The signature from x-onramp-signature header
+   * @returns boolean indicating if signature is valid
+   */
+  verifyWebhookSignature(payload: string, signature: string): boolean {
+    try {
+      if (!this.config.apiKey) {
+        console.error('[OnRamp Money] API key not configured for webhook verification');
+        return false;
+      }
+
+      // Generate HMAC-SHA512 signature
+      const localSignature = crypto
+        .createHmac('sha512', this.config.apiKey)
+        .update(payload)
+        .digest('hex')
+        .toUpperCase();
+
+      const isValid = localSignature === signature.toUpperCase();
+
+      if (!isValid) {
+        console.error('[OnRamp Money] Webhook signature verification failed');
+      }
+
+      return isValid;
+    } catch (error) {
+      console.error('[OnRamp Money] Error verifying webhook signature:', error);
+      return false;
+    }
   }
 
   /**
@@ -186,7 +232,19 @@ export class OnRampMoneyService {
       params.append('redirectUrl', callbackUrl);
 
       // Generate full OnRamp Money URL
-      const onrampUrl = `${this.config.baseUrl}/main/buy/?${params.toString()}`;
+      // If base URL already has /app/ or /main/buy/, use it as-is, otherwise append /main/buy/
+      let urlBase = this.config.baseUrl;
+      if (!urlBase.includes('/app/') && !urlBase.includes('/main/buy/')) {
+        urlBase = `${urlBase}/main/buy/`;
+      } else if (!urlBase.endsWith('/')) {
+        urlBase = `${urlBase}/`;
+      }
+
+      const onrampUrl = `${urlBase}?${params.toString()}`;
+
+      if (!db) {
+        throw new Error('Database connection not available');
+      }
 
       // Insert order into database
       const result = await db.execute(sql`
@@ -224,7 +282,7 @@ export class OnRampMoneyService {
         RETURNING id, merchant_recognition_id, onramp_url
       `);
 
-      const insertedOrder = result.rows[0];
+      const insertedOrder = result.rows[0] as { id: string; merchant_recognition_id: string; onramp_url: string };
 
       return {
         success: true,
@@ -255,6 +313,10 @@ export class OnRampMoneyService {
         return { success: false, error: `Invalid status: ${status}` };
       }
 
+      if (!db) {
+        throw new Error('Database connection not available');
+      }
+
       // Update order status in database
       const result = await db.execute(sql`
         UPDATE onramp_money_orders
@@ -265,7 +327,7 @@ export class OnRampMoneyService {
           updated_at = NOW()
         WHERE order_id = ${orderId} OR merchant_recognition_id LIKE ${'%' + orderId + '%'}
         RETURNING id, user_id, status
-      `);
+      `) as { rows: Array<{ id: string; user_id: string; status: string }>; rowCount: number };
 
       if (result.rowCount === 0) {
         return { success: false, error: 'Order not found' };
@@ -289,6 +351,10 @@ export class OnRampMoneyService {
    */
   async getOrderStatus(identifier: string): Promise<OrderStatusResponse> {
     try {
+      if (!db) {
+        throw new Error('Database connection not available');
+      }
+
       // Try to find by merchant_recognition_id or order_id
       const result = await db.execute(sql`
         SELECT
@@ -311,7 +377,20 @@ export class OnRampMoneyService {
           OR id::text = ${identifier}
         ORDER BY created_at DESC
         LIMIT 1
-      `);
+      `) as { rows: Array<{
+        id: string;
+        order_id: string;
+        merchant_recognition_id: string;
+        fiat_amount: string;
+        fiat_currency: string;
+        crypto_amount: string | null;
+        crypto_currency: string;
+        network: string;
+        wallet_address: string;
+        status: string;
+        created_at: string;
+        completed_at: string | null;
+      }> };
 
       if (result.rows.length === 0) {
         return { success: false, error: 'Order not found' };
@@ -349,6 +428,10 @@ export class OnRampMoneyService {
    */
   async getUserOrders(userId: string, limit: number = 10): Promise<OrderStatusResponse[]> {
     try {
+      if (!db) {
+        throw new Error('Database connection not available');
+      }
+
       const result = await db.execute(sql`
         SELECT
           id,
@@ -367,7 +450,20 @@ export class OnRampMoneyService {
         WHERE user_id = ${userId}
         ORDER BY created_at DESC
         LIMIT ${limit}
-      `);
+      `) as { rows: Array<{
+        id: string;
+        order_id: string;
+        merchant_recognition_id: string;
+        fiat_amount: string;
+        fiat_currency: string;
+        crypto_amount: string | null;
+        crypto_currency: string;
+        network: string;
+        wallet_address: string;
+        status: string;
+        created_at: string;
+        completed_at: string | null;
+      }> };
 
       return result.rows.map(order => ({
         success: true,
@@ -410,7 +506,7 @@ export class OnRampMoneyService {
    */
   getSupportedCryptos(): Array<{ coin: string; networks: string[] }> {
     return [
-      { coin: 'usdt', networks: ['bep20', 'matic20', 'erc20', 'trc20'] },
+      { coin: 'usdt', networks: ['bep20', 'matic20', 'erc20', 'trc20', 'bsc-testnet'] },
       { coin: 'usdc', networks: ['bep20', 'matic20', 'erc20'] },
       { coin: 'busd', networks: ['bep20'] },
       { coin: 'matic', networks: ['matic20'] },
@@ -422,6 +518,4 @@ export class OnRampMoneyService {
 }
 
 // Export singleton instance
-export const onRampMoneyService = new OnRampMoneyService(
-  process.env.NODE_ENV === 'production'
-);
+export const onRampMoneyService = new OnRampMoneyService();

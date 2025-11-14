@@ -13,7 +13,7 @@ async function runMigration() {
     await client.connect();
     console.log('Connected to database');
     
-    const sql = readFileSync('./migrations/003_add_alt5_accounts_table.sql', 'utf8');
+    const sql = readFileSync('./migrations/004_add_onramp_money_orders_table.sql', 'utf8');
     
     await client.query(sql);
     console.log('Migration executed successfully');

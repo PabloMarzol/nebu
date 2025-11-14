@@ -180,10 +180,11 @@ app.use((req, res, next) => {
     }
   });
   
+  // Gasless quote endpoint (for tokens that support gasless swaps)
   app.get('/api/0x/quote', async (req, res) => {
     try {
       const { sellToken, buyToken, sellAmount, taker, chainId } = req.query;
-      
+
       if (!sellToken || !buyToken || !sellAmount || !taker) {
         return res.status(400).json({ error: 'Missing required parameters' });
       }
@@ -200,8 +201,7 @@ app.use((req, res, next) => {
       });
 
       const requestUrl = `https://api.0x.org/gasless/quote?${params}`;
-      console.log('0x Gasless API Request URL:', requestUrl);
-      console.log('0x Gasless API Request Params:', {
+      console.log('🌟 0x GASLESS Quote Request:', {
         sellToken,
         buyToken,
         sellAmount,
@@ -215,44 +215,88 @@ app.use((req, res, next) => {
           '0x-api-key': process.env.ZERO_X_API_KEY || '',
           '0x-version': 'v2',
         },
+        signal: AbortSignal.timeout(10000), // 10 second timeout
       });
 
-      console.log('0x Gasless API Response Status:', response.status);
-      console.log('0x Gasless API Response Headers:', Object.fromEntries(response.headers.entries()));
+      console.log('🌟 0x Gasless Response Status:', response.status);
 
       if (!response.ok) {
         const error = await response.json();
-        console.error('0x Gasless API error:', error);
+        console.error('❌ 0x Gasless API error:', error);
         if (error.data && error.data.details) {
-          console.error('0x Gasless API error details:', JSON.stringify(error.data.details, null, 2));
+          console.error('Error details:', JSON.stringify(error.data.details, null, 2));
         }
         return res.status(response.status).json(error);
       }
 
       const data = await response.json();
-      console.log('0x Gasless API Response Data:', JSON.stringify(data, null, 2));
-
-      // CRITICAL: Log actual API response structure for interface creation
-      console.log('🔍 0x GASLESS API RESPONSE STRUCTURE:', JSON.stringify(data, null, 2));
-
-      // Log the presence of settlerMetatransaction and transaction
-      console.log('Response contains settlerMetatransaction:', !!data.settlerMetatransaction);
-      console.log('Response contains transaction:', !!data.transaction);
-
-      if (data.settlerMetatransaction) {
-        console.log('settlerMetatransaction structure:', {
-          hasDomain: !!data.settlerMetatransaction.domain,
-          hasTypes: !!data.settlerMetatransaction.types,
-          hasValue: !!data.settlerMetatransaction.value
-        });
-      }
+      console.log('✅ 0x Gasless Quote Success');
 
       res.json(data);
     } catch (error: any) {
-      console.error('0x Gasless proxy error:', error);
+      console.error('❌ 0x Gasless proxy error:', error);
       res.status(500).json({ error: error.message });
     }
- });
+  });
+
+  // Regular permit2 quote endpoint (for non-gasless tokens)
+  app.get('/api/0x/permit2-quote', async (req, res) => {
+    try {
+      const { sellToken, buyToken, sellAmount, taker, chainId } = req.query;
+
+      if (!sellToken || !buyToken || !sellAmount || !taker) {
+        return res.status(400).json({ error: 'Missing required parameters' });
+      }
+
+      // Default to mainnet if not specified
+      const chain = chainId || '1';
+
+      const params = new URLSearchParams({
+        chainId: chain as string,
+        sellToken: sellToken as string,
+        buyToken: buyToken as string,
+        sellAmount: sellAmount as string,
+        taker: taker as string,
+      });
+
+      const requestUrl = `https://api.0x.org/swap/permit2/quote?${params}`;
+      console.log('💰 0x PERMIT2 Quote Request:', {
+        sellToken,
+        buyToken,
+        sellAmount,
+        taker,
+        chainId: chain
+      });
+
+      // Use permit2 API endpoint for non-gasless swaps
+      const response = await fetch(requestUrl, {
+        headers: {
+          '0x-api-key': process.env.ZERO_X_API_KEY || '',
+          '0x-version': 'v2',
+        },
+        signal: AbortSignal.timeout(10000), // 10 second timeout
+      });
+
+      console.log('💰 0x Permit2 Response Status:', response.status);
+
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('❌ 0x Permit2 API error:', error);
+        if (error.data && error.data.details) {
+          console.error('Error details:', JSON.stringify(error.data.details, null, 2));
+        }
+        return res.status(response.status).json(error);
+      }
+
+      const data = await response.json();
+      console.log('✅ 0x Permit2 Quote Success');
+
+      res.json(data);
+    } catch (error: any) {
+      console.error('❌ 0x Permit2 proxy error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
   
   // Endpoint to get gasless approval tokens
   app.get('/api/0x/gasless/gasless-approval-tokens', async (req, res) => {

@@ -60,7 +60,9 @@ const OnRampMoneyStatus: React.FC<OnRampMoneyStatusProps> = ({
     setError(null);
 
     try {
-      const response = await fetch(`/api/onramp-money/order/${id}`);
+      const response = await fetch(`/api/onramp-money/order/${id}`, {
+        credentials: 'include' // Include session cookie for authentication
+      });
       const data = await response.json();
 
       if (!response.ok || !data.success) {
@@ -82,7 +84,9 @@ const OnRampMoneyStatus: React.FC<OnRampMoneyStatusProps> = ({
     setError(null);
 
     try {
-      const response = await fetch('/api/onramp-money/orders?limit=10');
+      const response = await fetch('/api/onramp-money/orders?limit=10', {
+        credentials: 'include' // Include session cookie for authentication
+      });
       const data = await response.json();
 
       if (!response.ok || !data.success) {

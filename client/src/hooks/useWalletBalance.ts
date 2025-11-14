@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useWalletAuth } from './useWalletAuth';
-import { getTokensForChain } from '@/lib/zeroXServices';
+import { fetchTokenList, getTokensForChain } from '@/lib/zeroXServices';
 
 // Mapping from token symbols to CoinGecko IDs for price fetching
 const TOKEN_TO_COINGECKO_ID: Record<string, string> = {
@@ -19,6 +19,18 @@ const TOKEN_TO_COINGECKO_ID: Record<string, string> = {
   'ARB': 'arbitrum',
   'OP': 'optimism',
   'BASE': 'ethereum', // Base uses ETH as native token
+  'BAL': 'balancer', // Balancer token
+  'LINK': 'chainlink',
+  'UNI': 'uniswap',
+  'AAVE': 'aave',
+  'CRV': 'curve-dao-token',
+  'SNX': 'havven',
+  'MKR': 'maker',
+  'SUSHI': 'sushi',
+  '1INCH': '1inch',
+  'YFI': 'yearn-finance',
+  'GRT': 'the-graph',
+  'LDO': 'lido-dao',
 };
 
 /**
@@ -122,7 +134,16 @@ export function useWalletBalance(): WalletBalanceState {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const tokens = getTokensForChain(chainId);
+      // 🚀 FIX: Use full dynamic token list instead of curated fallback
+      // This ensures ALL tokens (including BAL, LINK, AAVE, etc.) are checked
+      let tokens;
+      try {
+        tokens = await fetchTokenList(chainId);
+        console.log(`✅ Checking balances for ${tokens.length} tokens on chain ${chainId}`);
+      } catch (error) {
+        console.warn('Failed to fetch dynamic token list, using fallback:', error);
+        tokens = getTokensForChain(chainId);
+      }
 
       // First, fetch all balances
       const balancePromises = tokens.map(async (token) => {
