@@ -636,7 +636,7 @@ export function getTokensForChain(chainId: number): Token[] {
     // Arbitrum
     42161: [
       {
-        address: '0xCaD7828a19b363A2B44717AFB1786B5196974D8E',
+        address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
         symbol: 'ETH',
         name: 'Ethereum',
         decimals: 18,
@@ -650,7 +650,7 @@ export function getTokensForChain(chainId: number): Token[] {
         logoURI: 'https://assets.coingecko.com/coins/images/2518/small/weth.png',
       },
       {
-        address: '0xaf88d065e77c8cC239327C5EDb3A432268e5831',
+        address: '0xaf88d065e77c8cC239327C5EDb3a432268e5831',
         symbol: 'USDC',
         name: 'USD Coin',
         decimals: 6,
