@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWalletAuth } from "@/hooks/useWalletAuth";
+import { placeOrderWithWallet } from "@/lib/hyperliquidService";
 
 interface HyperliquidTradingPanelProps {
   tradingMode: 'spot' | 'futures';
@@ -227,7 +228,7 @@ interface MarketData {
     },
   });
 
-  // Handle Order Placement
+  // Handle Order Placement - NOW WITH FRONTEND SIGNING
   const handlePlaceOrder = async () => {
     if (!isAuthenticated || !walletAddress) {
       toast({
@@ -265,21 +266,53 @@ interface MarketData {
       return;
     }
 
-    const orderData = {
-      walletAddress,
-      symbol: selectedPair,
-      side: tradeType,
-      orderType,
-      amount: parseFloat(amount),
-      price: orderType === 'limit' ? parseFloat(price) : undefined,
-      stopPrice: orderType === 'stop-loss' ? parseFloat(stopPrice) : undefined,
-      leverage: tradingMode === 'futures' ? leverage[0] : undefined,
-      reduceOnly: tradingMode === 'futures' ? reduceOnly : undefined,
-      postOnly,
-      tradingMode,
-    };
+    try {
+      // Show loading toast
+      toast({
+        title: "Signing Order",
+        description: "Please sign the transaction in your wallet...",
+        duration: 3000,
+      });
 
-    await placeOrderMutation.mutateAsync(orderData);
+      // Place order with user's wallet (client-side signing)
+      const result = await placeOrderWithWallet({
+        symbol: selectedPair,
+        side: tradeType,
+        amount: parseFloat(amount),
+        orderType: orderType === 'stop-loss' ? 'market' : orderType, // Convert stop-loss to market for now
+        price: orderType === 'limit' ? parseFloat(price) : undefined,
+        reduceOnly: tradingMode === 'futures' ? reduceOnly : undefined,
+        isTestnet: false, // TODO: Make this configurable
+      });
+
+      // Show success toast
+      toast({
+        title: "Order Placed Successfully",
+        description: `${tradeType.toUpperCase()} order for ${amount} ${selectedPair.split('/')[0]} placed.`,
+        duration: 5000,
+      });
+
+      // Reset form
+      setAmount("");
+      setPrice("");
+      setStopPrice("");
+
+      // Refetch orders and balance
+      queryClient.invalidateQueries({ queryKey: ['/api/hyperliquid/orders'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/hyperliquid/balance'] });
+      if (tradingMode === 'futures') {
+        queryClient.invalidateQueries({ queryKey: ['/api/hyperliquid/positions'] });
+      }
+
+    } catch (error: any) {
+      console.error('Order placement error:', error);
+      toast({
+        title: "Order Failed",
+        description: error.message || "Failed to place order. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    }
   };
 
   // Handle Leverage Change (Futures Only)

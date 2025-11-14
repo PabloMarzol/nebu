@@ -308,6 +308,148 @@ export async function switchToHyperliquidNetwork(isTestnet = false) {
   }
 }
 
+/**
+ * Place order using user's connected wallet (client-side signing)
+ * This allows any user to trade with their own wallet without backend custody
+ */
+export async function placeOrderWithWallet(params: {
+  symbol: string;
+  side: 'buy' | 'sell';
+  amount: number;
+  orderType: 'market' | 'limit';
+  price?: number;
+  reduceOnly?: boolean;
+  isTestnet?: boolean;
+}) {
+  try {
+    console.log('📝 Placing order with user wallet...', params);
+
+    // Create exchange client with user's MetaMask
+    const exchangeClient = createHyperliquidExchangeClient(params.isTestnet);
+
+    // Initialize info client for metadata
+    initializeClients(params.isTestnet);
+
+    // Normalize symbol - extract base asset
+    let coin = params.symbol
+      .replace('/', '')
+      .replace('-PERP', '')
+      .replace('USDC', '')
+      .replace('USDT', '')
+      .replace('USD', '');
+
+    console.log('📊 Normalized coin:', coin);
+
+    // Get asset metadata
+    const meta = await infoClient!.meta();
+    const assetIndex = meta.universe.findIndex((u: any) => u.name === coin);
+
+    if (assetIndex === -1) {
+      throw new Error(`Asset ${coin} not found in Hyperliquid`);
+    }
+
+    const asset = meta.universe[assetIndex];
+    const szDecimals = asset.szDecimals || 5;
+    console.log('✅ Found asset at index', assetIndex, ':', asset);
+
+    // Determine order price
+    let orderPrice: string;
+
+    if (params.orderType === 'market') {
+      // For market orders, fetch current price and add slippage
+      const mids = await infoClient!.allMids();
+      const currentPrice = parseFloat((mids as any)[coin] || '0');
+
+      if (currentPrice <= 0) {
+        throw new Error(`Could not fetch price for ${coin}`);
+      }
+
+      // 2% slippage for market orders
+      const slippage = 0.02;
+      const rawPrice = params.side === 'buy'
+        ? currentPrice * (1 + slippage)
+        : currentPrice * (1 - slippage);
+
+      orderPrice = roundToSignificantFigures(rawPrice, 5);
+      console.log(`✅ Market price: ${currentPrice}, order price: ${orderPrice}`);
+    } else if (params.price) {
+      // For limit orders, use provided price
+      orderPrice = roundToSignificantFigures(params.price, 5);
+    } else {
+      throw new Error('Price required for limit orders');
+    }
+
+    // Round amount to correct decimals
+    const roundedAmount = parseFloat(params.amount.toFixed(szDecimals));
+
+    // Build order
+    const order: any = {
+      a: assetIndex,
+      b: params.side === 'buy',
+      p: orderPrice,
+      s: roundedAmount.toString(),
+      r: params.reduceOnly || false,
+      t: params.orderType === 'market'
+        ? { limit: { tif: 'Ioc' } } // Immediate or cancel
+        : { limit: { tif: 'Gtc' } }, // Good till cancelled
+    };
+
+    console.log('📤 Sending order:', order);
+
+    // Submit order - will be signed with user's wallet
+    const result = await exchangeClient.order({
+      orders: [order],
+      grouping: 'na',
+    });
+
+    console.log('📥 Order result:', result);
+
+    if (result.status === 'ok') {
+      const orderData = result.response?.data?.statuses?.[0];
+
+      let orderId: string;
+      let filled: any = null;
+
+      if (orderData && 'resting' in orderData) {
+        orderId = orderData.resting.oid.toString();
+      } else if (orderData && 'filled' in orderData) {
+        orderId = orderData.filled.oid.toString();
+        filled = orderData.filled;
+      } else {
+        orderId = `order_${Date.now()}`;
+      }
+
+      return {
+        success: true,
+        orderId,
+        filled,
+        message: 'Order placed successfully',
+        raw: orderData,
+      };
+    } else {
+      throw new Error(JSON.stringify(result.response) || 'Order failed');
+    }
+  } catch (error: any) {
+    console.error('❌ Error placing order with wallet:', error);
+    throw new Error(`Failed to place order: ${error.message}`);
+  }
+}
+
+/**
+ * Helper: Round to significant figures (for prices)
+ */
+function roundToSignificantFigures(num: number, sigFigs: number): string {
+  if (num === 0) return '0';
+
+  const magnitude = Math.floor(Math.log10(Math.abs(num)));
+  const scale = Math.pow(10, magnitude - sigFigs + 1);
+  const rounded = Math.round(num / scale) * scale;
+
+  // Format with appropriate decimals
+  const decimals = Math.max(0, sigFigs - magnitude - 1);
+  return rounded.toFixed(decimals);
+}
+
 // Cleanup function for WebSocket connections
 export function cleanupHyperliquidConnections() {
   if (wsTransport) {

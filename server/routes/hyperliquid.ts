@@ -217,19 +217,25 @@ router.get('/positions/:walletAddress', async (req, res) => {
 
 /**
  * POST /api/hyperliquid/place-order
- * Place a new order
- * Note: Uses backend's private key for security
+ * Place a new order (DEPRECATED - Use frontend signing instead)
+ *
+ * ⚠️ IMPORTANT: This endpoint is now DEPRECATED for regular users.
+ * The frontend now signs orders directly with the user's wallet via MetaMask.
+ * This endpoint remains for backward compatibility and admin/testing purposes only.
+ *
+ * For multi-user support, orders should be signed client-side with placeOrderWithWallet()
  */
 router.post('/place-order', async (req, res) => {
   try {
     const orderData = req.body;
 
-    console.log('📦 Order Data Received:', {
+    console.log('📦 Order Data Received (DEPRECATED ENDPOINT):', {
       walletAddress: orderData.walletAddress,
       symbol: orderData.symbol,
       amount: orderData.amount,
     });
-    
+
+    console.log('⚠️ WARNING: This endpoint is deprecated. Use frontend signing for multi-user support.');
     console.log('🔐 Environment Config:', {
       envWallet: HYPERLIQUID_WALLET,
       envWalletExists: !!HYPERLIQUID_WALLET,
@@ -238,8 +244,8 @@ router.post('/place-order', async (req, res) => {
 
     // Basic validation
     if (!orderData.walletAddress || !orderData.symbol || !orderData.amount) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: walletAddress, symbol, amount' 
+      return res.status(400).json({
+        error: 'Missing required fields: walletAddress, symbol, amount'
       });
     }
 
@@ -249,16 +255,18 @@ router.post('/place-order', async (req, res) => {
       match: orderData.walletAddress?.toLowerCase() === HYPERLIQUID_WALLET?.toLowerCase(),
     });
 
-    // Security check: Verify the wallet address matches our configured wallet
+    // Security check: Only allow configured wallet for backend signing
+    // For multi-user support, use frontend signing instead
     if (orderData.walletAddress.toLowerCase() !== HYPERLIQUID_WALLET?.toLowerCase()) {
-      return res.status(403).json({ 
-        error: 'Unauthorized: Wallet address does not match configured wallet' 
+      return res.status(403).json({
+        error: 'Unauthorized: This endpoint only supports the configured admin wallet. For multi-user trading, use frontend signing (placeOrderWithWallet).',
+        hint: 'Orders are now signed client-side with MetaMask for security and multi-user support.'
       });
     }
 
     if (!HYPERLIQUID_PRIVATE_KEY) {
-      return res.status(500).json({ 
-        error: 'Server configuration error: Private key not configured' 
+      return res.status(500).json({
+        error: 'Server configuration error: Private key not configured'
       });
     }
 
@@ -268,19 +276,19 @@ router.post('/place-order', async (req, res) => {
       privateKey: HYPERLIQUID_PRIVATE_KEY,
     };
 
-    console.log('✅ Placing order with Hyperliquid...');
+    console.log('✅ Placing order with backend wallet (admin mode)...');
 
     // Place order
     const result = await hyperliquidClient.placeOrder(orderParams);
-    
+
     console.log('🎉 Order result:', result);
-    
+
     res.json(result);
   } catch (error: any) {
     console.error('❌ Error placing order:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Failed to place order',
-      message: error.message 
+      message: error.message
     });
   }
 });
