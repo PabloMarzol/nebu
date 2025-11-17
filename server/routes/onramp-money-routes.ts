@@ -5,6 +5,42 @@ import { requireAuth } from '../middleware/auth-middleware';
 const router = Router();
 
 /**
+ * Simple in-memory rate limiter for webhook endpoint
+ * Prevents abuse by limiting requests per IP
+ */
+const webhookRateLimiter = new Map<string, { count: number; resetTime: number }>();
+const WEBHOOK_RATE_LIMIT = 100; // Max requests per minute per IP
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+
+function checkWebhookRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const record = webhookRateLimiter.get(ip);
+
+  if (!record || now > record.resetTime) {
+    // Reset or create new record
+    webhookRateLimiter.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+    return true;
+  }
+
+  if (record.count >= WEBHOOK_RATE_LIMIT) {
+    return false; // Rate limit exceeded
+  }
+
+  record.count++;
+  return true;
+}
+
+// Cleanup rate limiter every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, record] of webhookRateLimiter.entries()) {
+    if (now > record.resetTime) {
+      webhookRateLimiter.delete(ip);
+    }
+  }
+}, 5 * 60 * 1000);
+
+/**
  * OnRamp Money Routes
  * For buying cryptocurrency with fiat using OnRamp Money LP infrastructure
  */
@@ -145,6 +181,16 @@ router.get('/callback', async (req: Request, res: Response) => {
  */
 router.post('/webhook', async (req: Request, res: Response) => {
   try {
+    // Rate limiting check
+    const clientIp = req.ip || req.connection.remoteAddress || 'unknown';
+    if (!checkWebhookRateLimit(clientIp)) {
+      console.warn('[OnRamp Money] Webhook rate limit exceeded for IP:', clientIp);
+      return res.status(429).json({
+        success: false,
+        error: 'Rate limit exceeded. Please try again later.'
+      });
+    }
+
     // Get signature and payload from headers
     const payload = req.headers['x-onramp-payload'] as string;
     const signature = req.headers['x-onramp-signature'] as string;
@@ -157,11 +203,11 @@ router.post('/webhook', async (req: Request, res: Response) => {
       });
     }
 
-    // Verify webhook signature
+    // Verify webhook signature (primary security measure)
     const isValid = onRampMoneyService.verifyWebhookSignature(payload, signature);
 
     if (!isValid) {
-      console.error('[OnRamp Money] Webhook signature verification failed');
+      console.error('[OnRamp Money] Webhook signature verification failed for IP:', clientIp);
       return res.status(403).json({
         success: false,
         error: 'Invalid signature'

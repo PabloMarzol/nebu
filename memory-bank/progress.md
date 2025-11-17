@@ -210,3 +210,112 @@
 - ✅ TradingView chart update strategy recorded
 - ✅ React Query best practices captured
 - ✅ Performance optimization techniques noted
+- ✅ OnRamp Money integration patterns documented
+- ✅ OnRamp Money troubleshooting guide created
+
+## ✅ OnRamp Money Integration - Performance & Security Updates
+
+### Completed Improvements (Latest Session)
+1. **Performance Optimization - Logging System**
+   - **Issue**: Excessive console logging from 0x services causing performance degradation
+   - **Solution**: Implemented debug mode logging utility
+     - Logs only active in development or when `DEBUG_0X=true` in localStorage
+     - Reduced 20+ verbose logs to conditional debug logs
+     - Maintained error logging for critical issues
+   - **Impact**: Cleaner production logs, better performance
+
+2. **Backend Error Handling Enhancement**
+   - **Issue**: Missing API key validation and unclear error messages
+   - **Solution**:
+     - Added startup configuration validation
+     - Enhanced webhook signature verification logging
+     - Improved error messages with actionable suggestions
+     - Added detailed logging for signature verification failures
+   - **Files Modified**:
+     - `server/services/onramp-money-service.ts` (configuration validation)
+     - Enhanced `verifyWebhookSignature()` method
+
+3. **Real-time Order Status Polling**
+   - **Issue**: Orders stuck in pending status when webhooks fail
+   - **Solution**:
+     - Implemented 10-second polling for pending orders
+     - Silent background updates without loading states
+     - Auto-refresh indicator in UI
+     - Smart polling that stops when order completes
+   - **Files Modified**:
+     - `client/src/components/fx-swap/OnRampMoneyStatus.tsx`
+   - **Impact**: Reliable status updates even if webhooks fail
+
+4. **Security Enhancements**
+   - **Issue**: Webhook endpoint vulnerable to abuse
+   - **Solution**:
+     - Added rate limiting (100 requests/minute per IP)
+     - In-memory rate limiter with automatic cleanup
+     - Enhanced signature verification logging
+     - IP-based request tracking
+   - **Files Modified**:
+     - `server/routes/onramp-money-routes.ts` (rate limiter)
+   - **Impact**: Protected against webhook abuse and DDoS
+
+5. **Documentation Updates**
+   - **Added**: OnRamp Money integration patterns to systemPatterns.md
+     - Order flow patterns
+     - Security patterns
+     - Polling strategy
+     - Configuration validation
+     - Database management
+   - **Added**: Comprehensive troubleshooting guide to techContext.md
+     - 6 common issues with solutions
+     - Diagnostic steps for each issue
+     - Debugging tools and scripts
+     - Environment variable setup guide
+
+### Technical Improvements Summary
+
+#### Files Modified
+- ✅ `client/src/lib/zeroXServices.ts` - Debug logging utility
+- ✅ `server/services/onramp-money-service.ts` - Configuration validation & error handling
+- ✅ `server/routes/onramp-money-routes.ts` - Rate limiting & security
+- ✅ `client/src/components/fx-swap/OnRampMoneyStatus.tsx` - Polling mechanism
+- ✅ `memory-bank/systemPatterns.md` - Integration patterns
+- ✅ `memory-bank/techContext.md` - Troubleshooting guide
+- ✅ `memory-bank/progress.md` - Progress tracking
+
+#### Key Metrics
+- **Logging Reduction**: 20+ verbose logs → conditional debug logs
+- **Polling Interval**: 10 seconds for pending orders
+- **Rate Limit**: 100 requests/minute per IP
+- **Security**: Multi-layer (signature verification + rate limiting)
+
+### Remaining Tasks (Future Sessions)
+- [ ] **Mobile App Integration**: Deep linking for mobile apps
+- [ ] **Currency Expansion**: Add more fiat currencies and cryptocurrencies
+- [ ] **Swap Functionality**: Integrate OnRamp Money swap feature
+- [ ] **Advanced Analytics**: Order success rate tracking
+- [ ] **User Notifications**: Email/SMS notifications for order status
+
+### Known Issues & Monitoring Points
+- Monitor rate limiter memory usage in production
+- Watch for webhook signature verification failures
+- Track polling performance impact on server
+- Monitor order completion rates (webhook vs polling)
+
+### Environment Variables Required
+```bash
+# Critical for production
+ONRAMP_APP_ID=your_production_app_id
+ONRAMP_API_KEY=your_secret_api_key
+ONRAMP_BASE_URL=https://onramp.money
+FRONTEND_URL=https://your-domain.com
+
+# Optional debug mode (development only)
+DEBUG_0X=true  # Set in browser localStorage
+```
+
+### Success Criteria
+- ✅ Webhook signature verification working
+- ✅ Rate limiting preventing abuse
+- ✅ Polling providing fallback for failed webhooks
+- ✅ Clean production logs
+- ✅ Comprehensive troubleshooting documentation
+- ✅ Configuration validation on startup
