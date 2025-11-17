@@ -532,9 +532,12 @@ export async function fetchTokenList(chainId: number = 1): Promise<Token[]> {
         // Revalidate in background if cache is older than 5 minutes
         if (cacheAge > 5 * 60 * 1000) {
           console.log('🔄 Revalidating in background...');
-          fetchTokenList(chainId).catch(err =>
-            console.warn('Background revalidation failed:', err)
-          );
+          // Use setTimeout to avoid blocking the return statement and prevent recursion
+          setTimeout(() => {
+            fetchTokenList(chainId).catch(err =>
+              console.warn('Background revalidation failed:', err)
+            );
+          }, 0);
         }
 
         return cachedTokens;

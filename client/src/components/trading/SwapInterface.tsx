@@ -4,11 +4,11 @@ import { ArrowDownUp, Banknote } from 'lucide-react';
 import CryptoSwapInterface from './CryptoSwapInterface';
 import OnRampMoneyWidget from '../fx-swap/OnRampMoneyWidget';
 
-export default function SwapInterface() {
+export default function SwapInterface({ className = "" }) {
   const [activeTab, setActiveTab] = useState<'crypto' | 'fx'>('crypto');
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className={`w-full ${className}`}>
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'crypto' | 'fx')} className="w-full">
         {/* Tab Selector */}
         <TabsList className="grid w-full grid-cols-2 mb-4 bg-slate-800/50 border border-slate-700 p-1">
@@ -30,7 +30,7 @@ export default function SwapInterface() {
 
         {/* Crypto to Crypto Swap */}
         <TabsContent value="crypto" className="mt-0">
-          <CryptoSwapInterface />
+          <CryptoSwapInterface className="h-full" />
         </TabsContent>
 
 

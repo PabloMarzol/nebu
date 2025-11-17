@@ -29,7 +29,7 @@ export default function ProviderSwapTabs({ defaultTab = "onrampmoney" }: Provide
   };
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full">
       {/* Header Card */}
       <Card className="mb-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-slate-700">
         <CardHeader className="pb-3">
