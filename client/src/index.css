@@ -1116,7 +1116,7 @@ nav[class*="fixed"] {
   }
 }
 
-/* Nuclear reset for crisp text - EXCLUDE DROPDOWNS */
+/* Nuclear reset for crisp text - EXCLUDE DROPDOWNS AND SWAP CONTAINERS */
 * {
   margin: 0;
   padding: 0;
@@ -1126,8 +1126,8 @@ nav[class*="fixed"] {
   text-rendering: optimizeLegibility !important;
 }
 
-/* CRITICAL: Exclude dropdown menus from transform/filter resets */
-*:not(.dropdown-menu):not(.dropdown-container):not(.dropdown-container *):not([role="dialog"]):not([data-radix-dialog-content]):not([data-radix-dropdown-menu-content]):not([data-radix-select-content]):not([data-radix-popper-content-wrapper]) {
+/* CRITICAL: Exclude dropdown menus AND swap containers from transform/filter resets */
+*:not(.dropdown-menu):not(.dropdown-container):not(.dropdown-container *):not([role="dialog"]):not([data-radix-dialog-content]):not([data-radix-dropdown-menu-content]):not([data-radix-select-content]):not([data-radix-popper-content-wrapper]):not(.swap-tab-content):not(.swap-tab-content *):not(.swap-layout-container):not(.swap-layout-container *):not(.swap-interface-section):not(.swap-interface-section *):not(.swap-interface-inner):not(.swap-interface-inner *) {
   transform: none !important;
   filter: none !important;
   will-change: auto !important;
@@ -2096,7 +2096,14 @@ body[data-radix-dialog-open] {
   isolation: auto !important;
 }
 
-/* Fix for Trading Page Container Issues - Simplified approach */
+/* ========================================
+   SWAP LAYOUT - DROPDOWN-SAFE ARCHITECTURE
+   ======================================== */
+
+/* CRITICAL: These rules ensure dropdowns work properly
+   by removing ALL CSS properties that interfere with
+   Radix UI Portal positioning */
+
 .swap-tab-content {
   position: static !important;
   overflow: visible !important;
@@ -2105,14 +2112,113 @@ body[data-radix-dialog-open] {
   transform: none !important;
   filter: none !important;
   backdrop-filter: none !important;
+  will-change: auto !important;
 }
 
+.swap-layout-container {
+  position: static !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1.5rem !important;
+  width: 100% !important;
+  overflow: visible !important;
+  contain: none !important;
+  isolation: auto !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+}
+
+.swap-header-section {
+  position: static !important;
+  overflow: visible !important;
+  contain: none !important;
+  isolation: auto !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+}
+
+.swap-header-card {
+  overflow: visible !important;
+  contain: none !important;
+  isolation: auto !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+}
+
+.swap-interface-section {
+  position: static !important;
+  display: flex !important;
+  justify-content: center !important;
+  width: 100% !important;
+  overflow: visible !important;
+  contain: none !important;
+  isolation: auto !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+}
+
+.swap-interface-inner {
+  position: static !important;
+  width: 100% !important;
+  max-width: 28rem !important; /* 448px */
+  overflow: visible !important;
+  contain: none !important;
+  isolation: auto !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+}
+
+.swap-info-section {
+  position: static !important;
+  overflow: visible !important;
+  contain: none !important;
+  isolation: auto !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+}
+
+/* Ensure ALL children of swap containers support dropdowns */
+.swap-tab-content *,
+.swap-layout-container *,
+.swap-interface-section *,
+.swap-interface-inner * {
+  contain: none !important;
+  isolation: auto !important;
+}
+
+/* CRITICAL: Override problematic glass styles for swap containers */
+.swap-tab-content .glass,
+.swap-layout-container .glass,
+.swap-header-card {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Legacy classes - keep for backwards compatibility */
 .swap-interface-container {
   position: static !important;
   display: block !important;
   width: auto !important;
   min-height: auto !important;
   overflow: visible !important;
+  contain: none !important;
+  isolation: auto !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
 }
 
 .swap-interface-wrapper {
@@ -2120,6 +2226,63 @@ body[data-radix-dialog-open] {
   width: auto !important;
   max-width: none !important;
   overflow: visible !important;
+  contain: none !important;
+  isolation: auto !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+}
+
+/* ========================================
+   RADIX UI SELECT DROPDOWN FIXES
+   ======================================== */
+
+/* Ensure Select dropdowns work properly in swap containers */
+.swap-tab-content [data-radix-select-trigger],
+.swap-layout-container [data-radix-select-trigger],
+.swap-interface-section [data-radix-select-trigger],
+.swap-interface-inner [data-radix-select-trigger] {
+  position: relative !important;
+  overflow: visible !important;
+  contain: none !important;
+  isolation: auto !important;
+}
+
+/* Ensure Select content portals properly */
+[data-radix-select-viewport],
+[data-radix-select-content] {
+  position: fixed !important;
+  z-index: 99999 !important;
+  contain: none !important;
+  isolation: auto !important;
+  transform: none !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+}
+
+/* Ensure proper positioning for Select portal wrapper */
+[data-radix-popper-content-wrapper] {
+  position: fixed !important;
+  z-index: 99999 !important;
+  contain: none !important;
+  isolation: auto !important;
+  transform: translateX(0) translateY(0) !important;
+  filter: none !important;
+  backdrop-filter: none !important;
+  will-change: transform !important;
+}
+
+/* Override any parent transforms that might affect Select positioning */
+.swap-tab-content [data-radix-select-content],
+.swap-layout-container [data-radix-select-content] {
+  position: fixed !important;
+  top: auto !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
 }
 
 /* Override problematic parent containers */
