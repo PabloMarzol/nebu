@@ -1,62 +1,77 @@
-import { Card, CardContent } from '@/components/ui/card';
-import OrderBook from '@/components/trading/order-book';
-import TradingChart from '@/components/trading/trading-chart';
-import HyperliquidTradingPanel from '@/components/trading/hyperliquid-trading-panel';
-import RecentTrades from '@/components/trading/recent-trades';
+import { Badge } from "@/components/ui/badge";
+import OrderBook from "@/components/trading/order-book";
+import TradingChart from "@/components/trading/trading-chart";
+import HyperliquidTradingPanel from "@/components/trading/hyperliquid-trading-panel";
+import TradingDashboard from "@/components/trading/trading-dashboard";
+import { LivePriceWithChange } from "@/components/trading/live-market-ticker";
 
-interface SpotTradingLayoutProps {
-  selectedPair: string;
-}
-
-export default function SpotTradingLayout({ selectedPair }: SpotTradingLayoutProps) {
+/**
+ * Spot Trading Layout Component
+ * Professional CSS Grid layout for spot trading with Hyperliquid integration
+ *
+ * Features:
+ * - Real-time price charts (TradingChart)
+ * - Live order book with bid/ask spreads (OrderBook)
+ * - Quick trade panel with frontend wallet signing (HyperliquidTradingPanel)
+ * - Position/order management (TradingDashboard)
+ * - Live price tickers for major pairs
+ */
+export default function SpotTradingLayout() {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 max-h-[600px]">
-      {/* LEFT SIDEBAR: Order Book */}
-      <div className="lg:col-span-1">
-        <Card className="h-full bg-slate-900 border border-slate-700">
-          <CardContent className="p-4 h-full overflow-y-auto">
-            <OrderBook symbol={selectedPair} />
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* MAIN CHART AREA */}
-      <div className="lg:col-span-2 space-y-6">
-        {/* Trading Header */}
-        <div className="flex items-center justify-between flex-wrap gap-4 p-4 bg-slate-900 rounded-lg border border-slate-700">
+    <div className="trading-layout-grid">
+      {/* HEADER: Trading Type + Market Stats */}
+      <div className="trading-header">
+        <div className="flex items-center justify-between flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <h2 className="text-xl font-bold text-white">Spot Trading</h2>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500/10 text-green-400 border border-green-500/30">
+            <Badge variant="outline" className="bg-green-500/10 border-green-500/30">
               <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
               Live Market
-            </span>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-500/10 text-blue-400 border border-blue-500/30">
+            </Badge>
+            <Badge variant="outline" className="bg-blue-500/10 border-blue-500/30">
               <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
               Powered by Hyperliquid
-            </span>
+            </Badge>
+          </div>
+
+          {/* Live Price Ticker - Compact */}
+          <div className="flex items-center gap-3">
+            <div className="text-sm">
+              <LivePriceWithChange symbol="BTC/USDT" />
+            </div>
+            <div className="text-sm">
+              <LivePriceWithChange symbol="ETH/USDT" />
+            </div>
+            <div className="text-sm">
+              <LivePriceWithChange symbol="SOL/USDT" />
+            </div>
           </div>
         </div>
-
-        {/* Trading Chart */}
-        <Card className="bg-slate-900 border border-slate-700 h-80 lg:h-[400px]">
-          <CardContent className="p-4 h-full">
-            <TradingChart symbol={selectedPair} />
-          </CardContent>
-        </Card>
       </div>
 
-      {/* RIGHT SIDEBAR: Trading Panel */}
-      <div className="lg:col-span-1 space-y-6">
-        <Card className="bg-slate-900 border border-slate-700">
-          <CardContent className="p-4">
-            <HyperliquidTradingPanel tradingMode="spot" />
-          </CardContent>
-        </Card>
-        <Card className="bg-slate-900 border border-slate-700 h-48 overflow-y-auto">
-          <CardContent className="p-4">
-            <RecentTrades symbol={selectedPair} />
-          </CardContent>
-        </Card>
+      {/* CHART AREA: TradingChart Component */}
+      <div className="chart-area">
+        <div className="chart-container">
+          <TradingChart symbol="BTC/USDT" />
+        </div>
+      </div>
+
+      {/* SIDEBAR: OrderBook + QuickTrade Panel */}
+      <div className="trading-sidebar">
+        {/* OrderBook - Top Half */}
+        <div className="sidebar-orderbook">
+          <OrderBook symbol="BTC/USDT" />
+        </div>
+
+        {/* QuickTrade Panel - Bottom Half */}
+        <div className="sidebar-trade-panel">
+          <HyperliquidTradingPanel tradingMode="spot" />
+        </div>
+      </div>
+
+      {/* BOTTOM: Positions/Orders Tabs */}
+      <div className="trading-bottom">
+        <TradingDashboard tradingMode="spot" selectedPair="BTC/USDT" />
       </div>
     </div>
   );

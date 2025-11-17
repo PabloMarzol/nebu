@@ -276,6 +276,7 @@ interface MarketData {
 
       // Place order with user's wallet (client-side signing)
       const result = await placeOrderWithWallet({
+        walletAddress: walletAddress as `0x${string}`,
         symbol: selectedPair,
         side: tradeType,
         amount: parseFloat(amount),
