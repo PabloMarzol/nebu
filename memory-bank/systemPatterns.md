@@ -198,3 +198,151 @@ User → Wallet Connection → Signature Verification → Session Token → Auth
 - **Error tracking**: Centralized error logging
 - **Performance monitoring**: Response time and throughput tracking
 - **User analytics**: Behavior and usage pattern analysis
+
+## OnRamp Money Integration Patterns
+
+### 1. Fiat-to-Crypto On-Ramp Architecture
+```
+User → OnRampMoneyWidget → Backend API → OnRamp Money LP
+  ↓                ↓              ↓              ↓
+Order Created → URL Generated → User Redirect → Payment Processing
+  ↓                                              ↓
+Order Status ← Webhook Callback ← Status Update ← Transaction Complete
+  ↓
+Polling Mechanism (fallback)
+```
+
+### 2. Order Flow Pattern
+```typescript
+// 1. Order Creation
+POST /api/onramp-money/create-order
+  → Validates inputs (amount, currency, wallet)
+  → Generates merchant recognition ID
+  → Creates database record
+  → Returns OnRamp Money URL
+
+// 2. User Payment
+  → User redirected to OnRamp Money platform
+  → Completes payment via UPI/Bank Transfer
+  → OnRamp Money processes transaction
+
+// 3. Status Updates (Dual-Path)
+  Path A: Webhook (Primary)
+    POST /api/onramp-money/webhook
+      → HMAC-SHA512 signature verification
+      → Rate limiting check
+      → Status code mapping
+      → Database update
+
+  Path B: Polling (Fallback)
+    GET /api/onramp-money/order/:id
+      → Every 10 seconds for pending orders
+      → Silent background updates
+      → Auto-refresh UI indicator
+```
+
+### 3. Security Pattern for OnRamp Integration
+```typescript
+// Multi-layer security approach
+1. Webhook Signature Verification (HMAC-SHA512)
+   - Primary security mechanism
+   - Prevents unauthorized webhook calls
+   - Logs verification failures with partial signatures
+
+2. Rate Limiting
+   - 100 requests/minute per IP
+   - In-memory rate limiter with automatic cleanup
+   - Prevents webhook abuse
+
+3. Environment Variable Validation
+   - Startup configuration validation
+   - Warning logs for missing credentials
+   - Graceful degradation
+```
+
+### 4. Error Handling Pattern
+```typescript
+// Robust error handling with user-friendly messages
+try {
+  const result = await onRampMoneyService.createOrder(request);
+  if (!result.success) {
+    return { error: result.error, suggestions: [...] };
+  }
+} catch (error) {
+  console.error('[OnRamp Money]:', error);
+  return {
+    error: 'Service temporarily unavailable',
+    fallback: 'Please try again or use alternative method'
+  };
+}
+```
+
+### 5. Polling Strategy Pattern
+```typescript
+// Smart polling for order status updates
+useEffect(() => {
+  if (order?.status !== 'pending') return;
+
+  const interval = setInterval(() => {
+    fetchOrderStatus(orderId, true); // Silent fetch
+  }, 10000); // 10 seconds
+
+  return () => clearInterval(interval);
+}, [order?.status]);
+```
+
+### 6. Logging Optimization Pattern
+```typescript
+// Debug mode logging utility
+const DEBUG_MODE =
+  process.env.NODE_ENV === 'development' ||
+  localStorage.getItem('DEBUG_0X') === 'true';
+
+function debugLog(...args: any[]) {
+  if (DEBUG_MODE) console.log(...args);
+}
+
+// Production: Minimal logging
+// Development: Verbose logging with toggle
+```
+
+### 7. Configuration Validation Pattern
+```typescript
+// Startup validation with warnings
+class OnRampMoneyService {
+  constructor() {
+    this.validateConfiguration();
+  }
+
+  private validateConfiguration(): void {
+    const warnings: string[] = [];
+
+    if (!this.config.apiKey) {
+      warnings.push('ONRAMP_API_KEY not set');
+    }
+
+    if (warnings.length > 0) {
+      console.warn('[OnRamp Money] Warnings:', warnings);
+    }
+  }
+}
+```
+
+### 8. Database Order Management Pattern
+```sql
+-- Order lifecycle tracking
+CREATE TABLE onramp_money_orders (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  order_id VARCHAR, -- OnRamp's order ID
+  merchant_recognition_id VARCHAR UNIQUE,
+  status VARCHAR DEFAULT 'pending',
+  created_at TIMESTAMP DEFAULT NOW(),
+  completed_at TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Indexes for fast lookups
+CREATE INDEX idx_user_status ON onramp_money_orders(user_id, status);
+CREATE INDEX idx_order_id ON onramp_money_orders(order_id);
+```
