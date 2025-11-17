@@ -35,7 +35,7 @@ export default function Trading() {
 
   return (
     <div className="min-h-screen page-content">
-      <div className="w-full">
+      <div className="w-full min-w-0">
         {/* Risk Disclosure Banner */}
         <RiskBanner />
 

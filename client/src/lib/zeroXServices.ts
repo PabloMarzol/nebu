@@ -99,6 +99,17 @@ async function fetchWithRetry(url: string, maxRetries: number = 3): Promise<Resp
 }
 
 /**
+ * Logging utility - only logs in development mode or when DEBUG_0X is set
+ */
+const DEBUG_MODE = process.env.NODE_ENV === 'development' || localStorage.getItem('DEBUG_0X') === 'true';
+
+function debugLog(...args: any[]) {
+  if (DEBUG_MODE) {
+    console.log(...args);
+  }
+}
+
+/**
  * Module-level cache for gasless tokens to avoid redundant API calls
  */
 const gaslessTokensCache = new Map<number, { tokens: string[], timestamp: number }>();
@@ -111,7 +122,7 @@ async function fetchGaslessApprovalTokens(chainId: number): Promise<string[]> {
   // Check cache first
   const cached = gaslessTokensCache.get(chainId);
   if (cached && Date.now() - cached.timestamp < GASLESS_CACHE_TTL) {
-    console.log('Using cached gasless tokens for chain', chainId);
+    debugLog('Using cached gasless tokens for chain', chainId);
     return cached.tokens;
   }
 
@@ -129,7 +140,7 @@ async function fetchGaslessApprovalTokens(chainId: number): Promise<string[]> {
     // Cache the result
     gaslessTokensCache.set(chainId, { tokens, timestamp: Date.now() });
 
-    console.log('Fetched and cached gasless approval tokens for chain', chainId, ':', tokens);
+    debugLog('Fetched and cached gasless approval tokens for chain', chainId, ':', tokens.length, 'tokens');
     return tokens;
   } catch (error) {
     console.error('Error fetching gasless approval tokens:', error);
@@ -147,10 +158,10 @@ async function ensureMainTokensPresent(tokens: Token[], chainId: number): Promis
   
   // Check for missing main tokens
   const missingSymbols = mainSymbols.filter(symbol => !tokenMap.has(symbol));
-  
+
   if (missingSymbols.length === 0) return tokens;
-  
-  console.log('Missing main tokens for chain', chainId, ':', missingSymbols);
+
+  debugLog('Missing main tokens for chain', chainId, ':', missingSymbols);
   
   // Fetch metadata for missing tokens from various sources
   const enhancedTokens = [...tokens];
@@ -503,12 +514,12 @@ function getTokenListUrl(chainId: number): string | undefined {
  * Optimized with: cache-first strategy, parallel API calls, stale-while-revalidate
  */
 export async function fetchTokenList(chainId: number = 1): Promise<Token[]> {
-  console.log('⚡ Fetching tokens for chain:', chainId);
+  debugLog('⚡ Fetching tokens for chain:', chainId);
 
   const tokenListUrl = TOKEN_LISTS[chainId];
 
   if (!tokenListUrl) {
-    console.warn('No token list URL for chain:', chainId);
+    debugLog('No token list URL for chain:', chainId);
     return getTokensForChain(chainId);
   }
 
@@ -543,9 +554,6 @@ export async function fetchTokenList(chainId: number = 1): Promise<Token[]> {
         return cachedTokens;
       }
     }
-  } catch (cacheError) {
-    console.warn('Cache read failed:', cacheError);
-  }
 
   // Cache miss or expired - fetch fresh data
   try {
@@ -628,7 +636,7 @@ export async function fetchTokenList(chainId: number = 1): Promise<Token[]> {
           console.log('Using cached token list (age:', Math.round(cacheAge / 1000 / 60), 'minutes)');
           return JSON.parse(cachedTokens);
         } else {
-          console.log('Cached token list is too old, removing...');
+          debugLog('Cached token list is too old, removing...');
           localStorage.removeItem(`tokenList_${chainId}`);
           localStorage.removeItem(`tokenList_timestamp_${chainId}`);
         }
@@ -685,7 +693,7 @@ export async function getPermit2Quote(
 
   const data = await response.json();
 
-  console.log('🔍 0x PERMIT2 QUOTE RESPONSE:', JSON.stringify(data, null, 2));
+  debugLog('🔍 0x PERMIT2 QUOTE RESPONSE:', JSON.stringify(data, null, 2));
 
   return data;
 }
@@ -717,7 +725,7 @@ export async function getGaslessQuote(
 
   const data = await response.json();
 
-  console.log('🔍 0x GASLESS QUOTE RESPONSE:', JSON.stringify(data, null, 2));
+  debugLog('🔍 0x GASLESS QUOTE RESPONSE:', JSON.stringify(data, null, 2));
 
   return data;
 }
@@ -738,7 +746,7 @@ export async function getSwapQuote(
   // 🚀 SMART ROUTING: Use gasless endpoint only if BOTH tokens support gasless
   const useGasless = sellTokenSupportsGasless && buyTokenSupportsGasless;
 
-  console.log(`🔀 Quote routing decision: ${useGasless ? 'GASLESS' : 'PERMIT2'}`, {
+  debugLog(`🔀 Quote routing decision: ${useGasless ? 'GASLESS' : 'PERMIT2'}`, {
     sellToken,
     buyToken,
     sellTokenSupportsGasless,
@@ -778,7 +786,7 @@ export async function getTokenPrice(
   const data = await response.json();
 
   // CRITICAL: Log actual API response structure for interface creation
-  console.log('🔍 0x PERMIT2 PRICE RESPONSE STRUCTURE:', JSON.stringify(data, null, 2));
+  debugLog('🔍 0x PERMIT2 PRICE RESPONSE STRUCTURE:', JSON.stringify(data, null, 2));
 
   return data;
 }

@@ -124,7 +124,35 @@ export class OnRampMoneyService {
       isProduction: appId !== '2'
     };
 
-    console.log('[OnRamp Money] Initialized with appId:', appId);
+    // Validate critical configuration
+    this.validateConfiguration();
+
+    console.log('[OnRamp Money] Initialized with appId:', appId, 'isProduction:', this.config.isProduction);
+  }
+
+  /**
+   * Validate OnRamp Money configuration
+   * Logs warnings for missing credentials but doesn't fail initialization
+   */
+  private validateConfiguration(): void {
+    const warnings: string[] = [];
+
+    if (!this.config.appId || this.config.appId === '2') {
+      warnings.push('ONRAMP_APP_ID is not set or using sandbox (appId: 2). Set ONRAMP_APP_ID in environment variables for production.');
+    }
+
+    if (!this.config.apiKey) {
+      warnings.push('ONRAMP_API_KEY is not set. Webhook signature verification will fail. Set ONRAMP_API_KEY in environment variables.');
+    }
+
+    if (!this.config.baseUrl || this.config.baseUrl === 'https://onramp.money') {
+      warnings.push('ONRAMP_BASE_URL is using default value. Consider setting ONRAMP_BASE_URL in environment variables.');
+    }
+
+    if (warnings.length > 0) {
+      console.warn('[OnRamp Money] Configuration warnings:');
+      warnings.forEach(warning => console.warn(`  - ${warning}`));
+    }
   }
 
   /**
@@ -136,7 +164,13 @@ export class OnRampMoneyService {
   verifyWebhookSignature(payload: string, signature: string): boolean {
     try {
       if (!this.config.apiKey) {
-        console.error('[OnRamp Money] API key not configured for webhook verification');
+        console.error('[OnRamp Money] ❌ CRITICAL: API key not configured for webhook verification');
+        console.error('[OnRamp Money] Set ONRAMP_API_KEY environment variable to enable webhook signature verification');
+        return false;
+      }
+
+      if (!payload || !signature) {
+        console.error('[OnRamp Money] ❌ Missing payload or signature for verification');
         return false;
       }
 
@@ -150,12 +184,17 @@ export class OnRampMoneyService {
       const isValid = localSignature === signature.toUpperCase();
 
       if (!isValid) {
-        console.error('[OnRamp Money] Webhook signature verification failed');
+        console.error('[OnRamp Money] ❌ Webhook signature verification failed');
+        console.error('[OnRamp Money] Expected signature:', localSignature.substring(0, 20) + '...');
+        console.error('[OnRamp Money] Received signature:', signature.substring(0, 20) + '...');
+        console.error('[OnRamp Money] Payload length:', payload.length);
+      } else {
+        console.log('[OnRamp Money] ✅ Webhook signature verified successfully');
       }
 
       return isValid;
     } catch (error) {
-      console.error('[OnRamp Money] Error verifying webhook signature:', error);
+      console.error('[OnRamp Money] ❌ Error verifying webhook signature:', error);
       return false;
     }
   }
@@ -183,21 +222,27 @@ export class OnRampMoneyService {
    */
   async createOrder(request: CreateOrderRequest): Promise<CreateOrderResponse> {
     try {
+      // Validate configuration before processing
+      if (!this.config.appId) {
+        console.error('[OnRamp Money] ❌ ONRAMP_APP_ID not configured');
+        return { success: false, error: 'OnRamp Money service not configured. Please contact support.' };
+      }
+
       // Validate inputs
       if (request.fiatAmount <= 0) {
         return { success: false, error: 'Fiat amount must be greater than 0' };
       }
 
       if (!FIAT_TYPES[request.fiatCurrency]) {
-        return { success: false, error: `Unsupported fiat currency: ${request.fiatCurrency}` };
+        return { success: false, error: `Unsupported fiat currency: ${request.fiatCurrency}. Supported: ${Object.keys(FIAT_TYPES).join(', ')}` };
       }
 
       if (!SUPPORTED_CRYPTOS.includes(request.cryptoCurrency)) {
-        return { success: false, error: `Unsupported cryptocurrency: ${request.cryptoCurrency}` };
+        return { success: false, error: `Unsupported cryptocurrency: ${request.cryptoCurrency}. Supported: ${SUPPORTED_CRYPTOS.join(', ')}` };
       }
 
       if (!SUPPORTED_NETWORKS.includes(request.network)) {
-        return { success: false, error: `Unsupported network: ${request.network}` };
+        return { success: false, error: `Unsupported network: ${request.network}. Supported: ${SUPPORTED_NETWORKS.join(', ')}` };
       }
 
       // Generate merchant recognition ID

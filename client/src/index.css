@@ -2330,149 +2330,170 @@ body[data-radix-dialog-open] {
 }
 
 /* ========================================
-   PROFESSIONAL TRADING LAYOUT - Grid System
+   PROFESSIONAL TRADING LAYOUT - Clean Grid System
+   NO OVERLAPS - Binance/Hyperliquid Style
    ======================================== */
 
-/* Main trading layout container - Full viewport grid */
-.trading-layout-grid {
-  display: grid;
-  grid-template-columns: 1fr 320px;
-  grid-template-rows: auto 1fr auto;
-  grid-template-areas:
-    "header header"
-    "chart sidebar"
-    "bottom bottom";
-  height: calc(100vh - 64px); /* Subtract navbar height */
-  width: 100vw;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  gap: 0;
-}
-
-/* Grid areas */
-.trading-header {
-  grid-area: header;
-  overflow: visible !important;
-  z-index: 10;
-  background: rgba(11, 14, 17, 0.95);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-  padding: 1rem 1.5rem;
-}
-
-.chart-area {
-  grid-area: chart;
-  overflow: hidden;
-  position: relative;
-  background: rgba(11, 14, 17, 0.5);
+/* Main trading container */
+.professional-trading-container {
   display: flex;
   flex-direction: column;
+  height: calc(100vh - 180px); /* Account for navbar + page header + banner */
+  width: 100%;
+  overflow: hidden;
+  background: rgba(11, 14, 17, 0.95);
+  border-radius: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
 }
 
-.trading-sidebar {
-  grid-area: sidebar;
+/* Header Section - Fixed at top */
+.trading-header-section {
+  flex-shrink: 0;
+  width: 100%;
+  z-index: 10;
+  overflow: visible;
+}
+
+/* Main Grid - Chart + Sidebar */
+.trading-main-grid {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 0;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+/* Chart Section - Left Side */
+.trading-chart-section {
+  position: relative;
+  overflow: hidden;
+  background: rgba(11, 14, 17, 0.5);
+  border-right: 1px solid rgba(148, 163, 184, 0.1);
+  min-height: 0;
+}
+
+/* Sidebar Section - Right Side */
+.trading-sidebar-section {
+  display: flex;
+  flex-direction: column;
+  background: rgba(11, 14, 17, 0.8);
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* OrderBook - Top half of sidebar */
+.orderbook-container {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  background: rgba(11, 14, 17, 0.8);
-  border-left: 1px solid rgba(148, 163, 184, 0.1);
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
 }
 
-.trading-bottom {
-  grid-area: bottom;
+/* Trading Panel - Bottom half of sidebar */
+.trading-panel-container {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Bottom Section - Active Orders/Positions */
+.trading-bottom-section {
+  flex-shrink: 0;
+  height: 280px;
   overflow-y: auto;
   overflow-x: hidden;
   background: rgba(11, 14, 17, 0.95);
   border-top: 1px solid rgba(148, 163, 184, 0.1);
-  max-height: 350px;
-  min-height: 250px;
 }
 
-/* Sidebar components */
-.sidebar-orderbook {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+/* Scrollbar Styling */
+.orderbook-container::-webkit-scrollbar,
+.trading-panel-container::-webkit-scrollbar,
+.trading-bottom-section::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-.sidebar-trade-panel {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+.orderbook-container::-webkit-scrollbar-track,
+.trading-panel-container::-webkit-scrollbar-track,
+.trading-bottom-section::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 3px;
 }
 
-/* Chart container - no padding, direct mounting */
-.chart-container {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  overflow: hidden;
+.orderbook-container::-webkit-scrollbar-thumb,
+.trading-panel-container::-webkit-scrollbar-thumb,
+.trading-bottom-section::-webkit-scrollbar-thumb {
+  background: rgba(147, 51, 234, 0.5);
+  border-radius: 3px;
 }
 
-/* Responsive breakpoints */
+.orderbook-container::-webkit-scrollbar-thumb:hover,
+.trading-panel-container::-webkit-scrollbar-thumb:hover,
+.trading-bottom-section::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.7);
+}
+
+/* Responsive Design */
 @media (max-width: 1280px) {
-  .trading-layout-grid {
-    grid-template-columns: 1fr 280px;
+  .trading-main-grid {
+    grid-template-columns: 1fr 300px;
   }
 }
 
 @media (max-width: 1024px) {
-  .trading-layout-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto auto;
-    grid-template-areas:
-      "header"
-      "chart"
-      "sidebar"
-      "bottom";
+  .professional-trading-container {
     height: auto;
     min-height: 100vh;
   }
 
-  .chart-area {
-    min-height: 500px;
-    height: 60vh;
+  .trading-main-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: 500px auto;
   }
 
-  .trading-sidebar {
-    border-left: none;
-    border-top: 1px solid rgba(148, 163, 184, 0.1);
-    max-height: none;
+  .trading-chart-section {
+    border-right: none;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
   }
 
-  .sidebar-orderbook,
-  .sidebar-trade-panel {
+  .trading-sidebar-section {
+    max-height: 800px;
+  }
+
+  .trading-bottom-section {
+    height: auto;
+    min-height: 250px;
     max-height: 400px;
   }
 }
 
 @media (max-width: 768px) {
-  .trading-layout-grid {
+  .trading-main-grid {
+    grid-template-rows: 400px auto;
+  }
+
+  .trading-bottom-section {
     height: auto;
-  }
-
-  .chart-area {
-    min-height: 400px;
-    height: 50vh;
-  }
-
-  .trading-header {
-    padding: 0.75rem 1rem;
-  }
-
-  .trading-bottom {
+    min-height: 200px;
     max-height: 300px;
   }
+
+  .orderbook-container,
+  .trading-panel-container {
+    max-height: 350px;
+  }
 }
 
-/* Override any conflicting max-width constraints */
-.trading-layout-grid * {
-  max-width: none !important;
+/* Ensure no max-width constraints interfere */
+.professional-trading-container * {
+  box-sizing: border-box;
 }
 
-.trading-layout-grid .max-w-7xl {
+.professional-trading-container .max-w-7xl {
   max-width: none !important;
 }

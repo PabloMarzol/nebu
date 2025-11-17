@@ -42,6 +42,7 @@ const OnRampMoneyStatus: React.FC<OnRampMoneyStatusProps> = ({
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [pollingEnabled, setPollingEnabled] = useState<boolean>(false);
 
   // Fetch specific order or order history
   useEffect(() => {
@@ -54,10 +55,42 @@ const OnRampMoneyStatus: React.FC<OnRampMoneyStatusProps> = ({
     }
   }, [isAuthenticated, orderId, showHistory]);
 
+  // Polling mechanism for pending orders
+  useEffect(() => {
+    if (!isAuthenticated || !pollingEnabled) return;
+
+    // Check if there are any pending orders
+    const hasPendingOrders = order?.status === 'pending' || orders.some(o => o.status === 'pending');
+
+    if (!hasPendingOrders) {
+      return;
+    }
+
+    // Poll every 10 seconds for pending orders
+    const pollInterval = setInterval(async () => {
+      if (order?.status === 'pending' && orderId) {
+        await fetchOrderStatus(orderId, true); // Silent fetch (no loading state)
+      } else if (orders.some(o => o.status === 'pending')) {
+        await fetchOrderHistory(true); // Silent fetch (no loading state)
+      }
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(pollInterval);
+  }, [isAuthenticated, pollingEnabled, order?.status, orderId, orders]);
+
+  // Enable polling after initial load
+  useEffect(() => {
+    if (order || orders.length > 0) {
+      setPollingEnabled(true);
+    }
+  }, [order, orders]);
+
   // Fetch specific order status
-  const fetchOrderStatus = async (id: string) => {
-    setLoading(true);
-    setError(null);
+  const fetchOrderStatus = async (id: string, silent: boolean = false) => {
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
 
     try {
       const response = await fetch(`/api/onramp-money/order/${id}`, {
@@ -72,16 +105,22 @@ const OnRampMoneyStatus: React.FC<OnRampMoneyStatusProps> = ({
       setOrder(data.data);
     } catch (err: any) {
       console.error('Failed to fetch order status:', err);
-      setError(err.message || 'Failed to fetch order status');
+      if (!silent) {
+        setError(err.message || 'Failed to fetch order status');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
   // Fetch user's order history
-  const fetchOrderHistory = async () => {
-    setLoading(true);
-    setError(null);
+  const fetchOrderHistory = async (silent: boolean = false) => {
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
 
     try {
       const response = await fetch('/api/onramp-money/orders?limit=10', {
@@ -97,9 +136,13 @@ const OnRampMoneyStatus: React.FC<OnRampMoneyStatusProps> = ({
       setOrders(data.data.filter((o: any) => o.success).map((o: any) => o.data));
     } catch (err: any) {
       console.error('Failed to fetch order history:', err);
-      setError(err.message || 'Failed to fetch order history');
+      if (!silent) {
+        setError(err.message || 'Failed to fetch order history');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -167,7 +210,15 @@ const OnRampMoneyStatus: React.FC<OnRampMoneyStatusProps> = ({
       {/* Status */}
       <div className="flex items-center justify-between">
         <span className="text-sm text-muted-foreground">Status</span>
-        {getStatusBadge(orderData.status)}
+        <div className="flex items-center gap-2">
+          {getStatusBadge(orderData.status)}
+          {orderData.status === 'pending' && pollingEnabled && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Auto-refreshing
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Amount */}
