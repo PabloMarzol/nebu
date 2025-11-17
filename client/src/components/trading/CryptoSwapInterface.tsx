@@ -40,7 +40,7 @@ import {
 } from '@/components/ui/tooltip';
 import SwapSuccessPopup from './SwapSuccessPopup';
 
-export default function CryptoSwapInterface() {
+export default function CryptoSwapInterface({ className = "" }) {
   const { walletAddress, isAuthenticated, chainId } = useWalletAuth();
   const { balances, totalUsdValue, isLoading: isLoadingBalances, error: balanceError } = useWalletBalance();
   
@@ -468,26 +468,23 @@ export default function CryptoSwapInterface() {
 
   return (
     <>
-      <Card className="w-full max-w-md mx-auto bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-slate-700">
+      <Card className={`w-full bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-slate-700 ${className}`}>
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-xl">
               <ArrowDownUp className="w-5 h-5 text-purple-400" />
               Crypto Swap
             </CardTitle>
-
-          </div>
-          
-          {/* Network indicator */}
-          <div className="flex items-center gap-2 text-sm mt-2">
-            <div className={`w-2 h-2 rounded-full ${isChainSupported ? 'bg-green-500' : 'bg-red-500'}`} />
-            <span className="text-muted-foreground">
-              {currentChain?.name || 'Unknown Network'}
-            </span>
+            <div className="flex items-center gap-2 text-sm">
+              <div className={`w-2 h-2 rounded-full ${isChainSupported ? 'bg-green-500' : 'bg-red-500'}`} />
+              <span className="text-muted-foreground text-xs">
+                {currentChain?.name || 'Unknown Network'}
+              </span>
+            </div>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-2">
+        <CardContent className="space-y-4">
           {/* Unsupported network warning */}
           {!isChainSupported && (
             <Alert variant="destructive" className="mb-4">

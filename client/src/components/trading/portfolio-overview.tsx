@@ -6,14 +6,14 @@ import { Wallet, TrendingUp, TrendingDown, RefreshCw, Loader2 } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { getChainById } from "@/lib/chains";
 
-export default function PortfolioOverview() {
+export default function PortfolioOverview({ className = "" }) {
   const { isAuthenticated, walletAddress, chainId } = useWalletAuth();
   const { balances, totalUsdValue, isLoading, error } = useWalletBalance();
   const currentChain = getChainById(chainId);
 
-  if (!isAuthenticated) {
+ if (!isAuthenticated) {
     return (
-      <Card>
+      <Card className={className}>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wallet className="w-5 h-5" />
@@ -32,7 +32,7 @@ export default function PortfolioOverview() {
   }
 
   return (
-    <Card>
+    <Card className={className}>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -78,13 +78,13 @@ export default function PortfolioOverview() {
                 No tokens found in wallet
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2 max-h-64 overflow-y-auto">
                 <p className="text-xs text-muted-foreground font-semibold mb-2">Holdings</p>
                 {balances.map((token) => (
-                  <div key={token.symbol} className="flex justify-between items-center text-sm">
+                  <div key={token.symbol} className="flex justify-between items-center text-sm py-2 border-b border-slate-700/50 last:border-b-0">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
-                        <span className="text-xs font-bold text-purple-400">
+                        <span className="text-xs font-bold text-purple-40">
                           {token.symbol.slice(0, 1)}
                         </span>
                       </div>
