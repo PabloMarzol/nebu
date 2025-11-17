@@ -26,7 +26,6 @@ import MarketDataStatus from "@/components/trading/market-data-status";
 import BlockchainWalletTracker from "@/components/trading/blockchain-wallet-tracker";
 import { LivePriceWithChange } from "@/components/trading/live-market-ticker";
 import APIServicesDashboard from "@/components/trading/api-services-dashboard";
-
 import HyperliquidTradingPanel from "@/components/trading/hyperliquid-trading-panel";
 import TradingDashboard from "@/components/trading/trading-dashboard";
 import { Button } from "@/components/ui/button";
@@ -38,14 +37,20 @@ import ProtectedTradingWrapper from "@/components/auth/protected-trading-wrapper
 import EnhancedTradingInterface from "@/components/trading/enhanced-trading-interface";
 import PortfolioBalanceDisplay from "@/components/trading/portfolio-balance-display";
 
-// Enhanced Trading Layout Components
-function EnhancedTradingHeader({ tradingMode, selectedPair, onPairChange }: { 
+// ============================================================================
+// PROFESSIONAL TRADING LAYOUT COMPONENTS
+// Clean, modular, and reusable - NO OVERLAPS
+// ============================================================================
+
+interface TradingHeaderProps {
   tradingMode: 'spot' | 'futures';
   selectedPair: string;
   onPairChange: (pair: string) => void;
-}) {
+}
+
+function TradingHeader({ tradingMode, selectedPair, onPairChange }: TradingHeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  
+
   const tradingPairs = [
     { symbol: "BTC/USDC", name: "Bitcoin", icon: "₿", color: "text-[#f7931a]" },
     { symbol: "ETH/USDC", name: "Ethereum", icon: "Ξ", color: "text-[#627eea]" },
@@ -66,9 +71,9 @@ function EnhancedTradingHeader({ tradingMode, selectedPair, onPairChange }: {
   const currentPair = availablePairs.find(p => p.symbol === selectedPair) || availablePairs[0];
 
   return (
-    <div className="bg-[#0b0e11] border border-slate-800 rounded-lg p-4">
-      <div className="flex items-center justify-between">
-        {/* Pair Selector */}
+    <div className="w-full bg-[#0b0e11] border-b border-slate-800 p-4">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        {/* Left: Pair Selector */}
         <div className="relative dropdown-container">
           <button
             onClick={() => setIsDropdownOpen(!isDropdownOpen)}
@@ -104,8 +109,8 @@ function EnhancedTradingHeader({ tradingMode, selectedPair, onPairChange }: {
           )}
         </div>
 
-        {/* Market Metrics */}
-        <div className="flex items-center space-x-8">
+        {/* Right: Market Metrics */}
+        <div className="flex items-center gap-6 flex-wrap">
           <div className="text-center">
             <div className="text-xs text-[#a1a1a1] font-medium">Mark Price</div>
             <div className="font-bold text-[#e5e5e5]">$43,250.50</div>
@@ -124,137 +129,70 @@ function EnhancedTradingHeader({ tradingMode, selectedPair, onPairChange }: {
             <div className="text-xs text-[#a1a1a1] font-medium">Open Interest</div>
             <div className="font-bold text-[#e5e5e5]">$850M</div>
           </div>
+          <Badge variant="outline" className="bg-blue-500/10 border-blue-500/30">
+            <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
+            Powered by Hyperliquid
+          </Badge>
         </div>
       </div>
     </div>
   );
 }
 
-function ChartToolsSidebar() {
-  const [activeTool, setActiveTool] = useState('candlestick');
-  
-  const tools = [
-    { id: 'candlestick', icon: '📊', name: 'Candlestick' },
-    { id: 'line', icon: '📈', name: 'Line' },
-    { id: 'area', icon: '🏔️', name: 'Area' },
-    { id: 'drawing', icon: '✏️', name: 'Drawing' },
-    { id: 'indicators', icon: '📉', name: 'Indicators' },
-    { id: 'fullscreen', icon: '⛶', name: 'Fullscreen' },
-  ];
+interface ProfessionalTradingLayoutProps {
+  tradingMode: 'spot' | 'futures';
+}
 
-  const timeframes = ['1m', '5m', '15m', '1h', '4h', '1D', '1W'];
+function ProfessionalTradingLayout({ tradingMode }: ProfessionalTradingLayoutProps) {
+  const [selectedPair, setSelectedPair] = useState(
+    tradingMode === 'futures' ? 'BTC-PERP' : 'BTC/USDC'
+  );
 
   return (
-    <Card className="glass h-full">
-      <CardContent className="p-2 h-full">
-        <div className="flex flex-col items-center space-y-2 h-full">
-          {/* Chart Type Tools */}
-          <div className="space-y-2">
-            {tools.map((tool) => (
-              <button
-                key={tool.id}
-                onClick={() => setActiveTool(tool.id)}
-                className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg transition-colors ${
-                  activeTool === tool.id 
-                    ? 'bg-blue-500/20 border border-blue-500/30' 
-                    : 'bg-slate-800/50 border border-slate-700 hover:bg-slate-800'
-                }`}
-                title={tool.name}
-              >
-                {tool.icon}
-              </button>
-            ))}
-          </div>
+    <div className="professional-trading-container">
+      {/* Header - Fixed at top */}
+      <div className="trading-header-section">
+        <TradingHeader
+          tradingMode={tradingMode}
+          selectedPair={selectedPair}
+          onPairChange={setSelectedPair}
+        />
+      </div>
 
-          <div className="flex-1" />
-
-          {/* Timeframe Buttons */}
-          <div className="space-y-1">
-            {timeframes.map((tf) => (
-              <button
-                key={tf}
-                className="w-10 h-8 rounded text-xs font-medium bg-slate-800/50 border border-slate-700 hover:bg-slate-800 transition-colors"
-              >
-                {tf}
-              </button>
-            ))}
+      {/* Main Trading Area - Grid Layout */}
+      <div className="trading-main-grid">
+        {/* Left: Trading Chart */}
+        <div className="trading-chart-section">
+          <div className="h-full w-full bg-[#0b0e11] rounded-lg overflow-hidden">
+            <TradingChart symbol={selectedPair} />
           </div>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Right: OrderBook + Trading Panel */}
+        <div className="trading-sidebar-section">
+          {/* OrderBook - Top Half */}
+          <div className="orderbook-container">
+            <OrderBook symbol={selectedPair} />
+          </div>
+
+          {/* Trading Panel - Bottom Half */}
+          <div className="trading-panel-container">
+            <HyperliquidTradingPanel tradingMode={tradingMode} />
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom: Active Orders, Positions, etc. */}
+      <div className="trading-bottom-section">
+        <TradingDashboard tradingMode={tradingMode} selectedPair={selectedPair} />
+      </div>
+    </div>
   );
 }
 
-function EnhancedBottomTabs({ activeTab, onTabChange }: {
-  activeTab: string;
-  onTabChange: (tab: string) => void;
-}) {
-  const tabs = [
-    { id: 'positions', name: 'Positions', icon: '📍' },
-    { id: 'orders', name: 'Open Orders', icon: '📋' },
-    { id: 'history', name: 'Trade History', icon: '📈' },
-    { id: 'balances', name: 'Balances', icon: '💰' },
-    { id: 'funding', name: 'Funding History', icon: '⚡' },
-  ];
-
-  return (
-    <Card className="glass">
-      <CardContent className="p-4">
-        {/* Tab Headers */}
-        <div className="flex space-x-1 mb-4 border-b border-slate-700">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => onTabChange(tab.id)}
-              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-blue-500/20 border border-b-0 border-blue-500/30 text-blue-400'
-                  : 'text-muted-foreground hover:text-white'
-              }`}
-            >
-              <span className="mr-2">{tab.icon}</span>
-              {tab.name}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab Content */}
-        <div className="min-h-[200px]">
-          {activeTab === 'positions' && (
-            <div className="text-center py-8 text-muted-foreground">
-              <div className="text-4xl mb-4">📍</div>
-              <p>No open positions</p>
-            </div>
-          )}
-          {activeTab === 'orders' && (
-            <div className="text-center py-8 text-muted-foreground">
-              <div className="text-4xl mb-4">📋</div>
-              <p>No open orders</p>
-            </div>
-          )}
-          {activeTab === 'history' && (
-            <div className="text-center py-8 text-muted-foreground">
-              <div className="text-4xl mb-4">📈</div>
-              <p>No trade history</p>
-            </div>
-          )}
-          {activeTab === 'balances' && (
-            <div className="text-center py-8 text-muted-foreground">
-              <div className="text-4xl mb-4">💰</div>
-              <p>Loading balances...</p>
-            </div>
-          )}
-          {activeTab === 'funding' && (
-            <div className="text-center py-8 text-muted-foreground">
-              <div className="text-4xl mb-4">⚡</div>
-              <p>No funding history</p>
-            </div>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+// ============================================================================
+// MAIN TRADING PAGE
+// ============================================================================
 
 export default function Trading() {
   const [showRiskBanner, setShowRiskBanner] = useState(true);
@@ -281,7 +219,7 @@ export default function Trading() {
       <div className="w-full min-w-0">
         {/* Risk Disclosure Banner */}
         {showRiskBanner && (
-          <div className="bg-red-50/10 border-red-50/30 rounded-lg p-4 mb-6 relative z-10">
+          <div className="bg-red-50/10 border-red-50/30 rounded-lg p-4 mb-6">
             <div className="flex items-start space-x-3">
               <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
@@ -301,9 +239,9 @@ export default function Trading() {
                   </Link>
                 </div>
               </div>
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowRiskBanner(false)}
                 className="text-red-400 hover:text-red-300 h-6 w-6 p-0"
               >
@@ -322,16 +260,17 @@ export default function Trading() {
           <p className="text-xl text-muted-foreground">Advanced tools for both beginners and professional traders</p>
         </div>
 
-        {/* Comprehensive Trading Platform - Remove max-width constraint for trading sections */}
-        <Tabs defaultValue="trading" className="w-full overflow-visible">
-          <TabsList className="grid w-full grid-cols-4 glass text-sm z-[100]">
+        {/* Main Trading Platform Tabs */}
+        <Tabs defaultValue="trading" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 glass text-sm">
             <TabsTrigger value="trading">Trading</TabsTrigger>
             <TabsTrigger value="swap">Swap</TabsTrigger>
             <TabsTrigger value="portfolio">AI Portfolio</TabsTrigger>
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="trading" className="space-y-6 overflow-visible relative z-[100]">
+          {/* TRADING TAB - Spot & Futures with Hyperliquid */}
+          <TabsContent value="trading" className="space-y-6">
             <ProtectedTradingWrapper feature="trading">
               {/* Trading Type Selector */}
               <Card className="glass">
@@ -339,7 +278,6 @@ export default function Trading() {
                   <div className="flex items-center space-x-4">
                     <Label className="font-semibold">Trading Type:</Label>
                     <div className="relative dropdown-container" ref={dropdownRef}>
-                      {/* Custom Trading Type Dropdown */}
                       <button
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                         className="flex h-10 w-[180px] items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
@@ -361,7 +299,6 @@ export default function Trading() {
                         <ChevronDown className="h-4 w-4 opacity-50" />
                       </button>
 
-                      {/* Custom Dropdown Menu */}
                       {isDropdownOpen && (
                         <div className="dropdown-menu absolute top-full left-0 mt-1 w-[180px] z-[9999] bg-slate-900 border border-slate-700 rounded-md shadow-xl overflow-hidden">
                           <div
@@ -397,140 +334,22 @@ export default function Trading() {
                         </div>
                       )}
                     </div>
-                    {/* 🆕 NEW: Added Hyperliquid badge for Spot and Futures */}
-                    {(selectedTradingType === 'spot' || selectedTradingType === 'futures') && (
-                      <Badge variant="outline" className="bg-blue-500/10 border-blue-500/30">
-                        <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
-                        Powered by Hyperliquid
-                      </Badge>
-                    )}
-                    <Badge variant="outline" className="ml-auto">
-                      <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
-                      Live Market
-                    </Badge>
                   </div>
                 </CardContent>
               </Card>
 
-            {/* 🚀 NEW: Professional Trading Layout with CSS Grid */}
-            {selectedTradingType === "spot" && (
-              <div className="trading-layout-grid relative z-[100]">
-                {/* HEADER: Trading Type + Market Stats */}
-                <div className="trading-header relative z-[100]">
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div className="flex items-center gap-4">
-                      <h2 className="text-xl font-bold text-white">Spot Trading</h2>
-                      <Badge variant="outline" className="bg-green-500/10 border-green-500/30">
-                        <span className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
-                        Live Market
-                      </Badge>
-                      <Badge variant="outline" className="bg-blue-500/10 border-blue-500/30">
-                        <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
-                        Powered by Hyperliquid
-                      </Badge>
-                    </div>
+              {/* Spot Trading Layout */}
+              {selectedTradingType === "spot" && (
+                <ProfessionalTradingLayout tradingMode="spot" />
+              )}
 
-                    {/* Live Price Ticker - Compact */}
-                    <div className="flex items-center gap-3">
-                      <div className="text-sm">
-                        <LivePriceWithChange symbol="BTC/USDT" />
-                      </div>
-                      <div className="text-sm">
-                        <LivePriceWithChange symbol="ETH/USDT" />
-                      </div>
-                      <div className="text-sm">
-                        <LivePriceWithChange symbol="SOL/USDT" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              {/* Futures Trading Layout */}
+              {selectedTradingType === "futures" && (
+                <ProfessionalTradingLayout tradingMode="futures" />
+              )}
 
-                {/* CHART AREA: TradingChart Component */}
-                <div className="chart-area relative z-[100]">
-                  <div className="chart-container">
-                    <TradingChart symbol="BTC/USDT" />
-                  </div>
-                </div>
-
-                {/* SIDEBAR: OrderBook + QuickTrade Panel */}
-                <div className="trading-sidebar relative z-[100]">
-                  {/* OrderBook - Top Half */}
-                  <div className="sidebar-orderbook relative z-[100]">
-                    <OrderBook symbol="BTC/USDT" />
-                  </div>
-
-                  {/* QuickTrade Panel - Bottom Half */}
-                  <div className="sidebar-trade-panel relative z-[100]">
-                    <HyperliquidTradingPanel tradingMode="spot" />
-                  </div>
-                </div>
-
-                {/* BOTTOM: Positions/Orders Tabs */}
-                <div className="trading-bottom relative z-[100]">
-                  <TradingDashboard tradingMode="spot" selectedPair="BTC/USDT" />
-                </div>
-              </div>
-            )}
-
-            {/* 🚀 NEW: Futures Trading Layout with CSS Grid */}
-            {selectedTradingType === "futures" && (
-              <div className="trading-layout-grid relative z-[100]">
-                {/* HEADER: Futures Info + Market Stats */}
-                <div className="trading-header relative z-[100]">
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div className="flex items-center gap-4">
-                      <h2 className="text-xl font-bold text-white">Perpetual Futures</h2>
-                      <Badge variant="outline" className="bg-blue-500/10 border-blue-500/30">
-                        <span className="w-2 h-2 bg-blue-500 rounded-full mr-2 animate-pulse"></span>
-                        Up to 50x Leverage
-                      </Badge>
-                      <Badge variant="outline" className="bg-purple-500/10 border-purple-500/30">
-                        <span className="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
-                        Hyperliquid
-                      </Badge>
-                    </div>
-
-                    {/* Live Price Ticker - Compact */}
-                    <div className="flex items-center gap-3">
-                      <div className="text-sm">
-                        <LivePriceWithChange symbol="BTC-PERP" />
-                      </div>
-                      <div className="text-sm">
-                        <LivePriceWithChange symbol="ETH-PERP" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* CHART AREA: TradingChart Component */}
-                <div className="chart-area relative z-[100]">
-                  <div className="chart-container">
-                    <TradingChart symbol="BTC-PERP" />
-                  </div>
-                </div>
-
-                {/* SIDEBAR: OrderBook + QuickTrade Panel */}
-                <div className="trading-sidebar relative z-[100]">
-                  {/* OrderBook - Top Half */}
-                  <div className="sidebar-orderbook relative z-[100]">
-                    <OrderBook symbol="BTC-PERP" />
-                  </div>
-
-                  {/* QuickTrade Panel - Bottom Half */}
-                  <div className="sidebar-trade-panel relative z-[100]">
-                    <HyperliquidTradingPanel tradingMode="futures" />
-                  </div>
-                </div>
-
-                {/* BOTTOM: Positions/Orders Tabs */}
-                <div className="trading-bottom relative z-[100]">
-                  <TradingDashboard tradingMode="futures" selectedPair="BTC-PERP" />
-                </div>
-              </div>
-            )}
-
-            {selectedTradingType === "options" && (
-              <div className="space-y-6">
+              {/* Options Trading - Coming Soon */}
+              {selectedTradingType === "options" && (
                 <Card className="glass">
                   <CardContent className="p-12 text-center">
                     <div className="mb-6">
@@ -542,35 +361,17 @@ export default function Trading() {
                         <span className="text-yellow-400 font-semibold">Coming Soon</span>
                       </div>
                       <p className="text-gray-300 text-lg mb-6 max-w-2xl mx-auto">
-                        Advanced options strategies with customizable strikes and expiries are currently under development. 
-                        We're building a comprehensive options trading platform with professional-grade tools.
+                        Advanced options strategies with customizable strikes and expiries are currently under development.
                       </p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
-                        <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
-                          <h4 className="text-lg font-semibold text-purple-400 mb-2">Call & Put Options</h4>
-                          <p className="text-gray-400 text-sm">European & American style options</p>
-                        </div>
-                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
-                          <h4 className="text-lg font-semibold text-green-400 mb-2">Options Strategies</h4>
-                          <p className="text-gray-400 text-sm">Spreads, straddles, and complex strategies</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm text-gray-400 mb-4">Stay tuned for updates!</p>
-                      <Button className="bg-gradient-to-r from-purple-600 to-green-600" disabled>
-                        Launch Options Platform
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
-              </div>
-            )}
+              )}
             </ProtectedTradingWrapper>
           </TabsContent>
 
-          {/* 🆕 UNCHANGED: Swap tab still uses 0x Protocol */}
-          <TabsContent value="swap" className="space-y-6 swap-tab-content overflow-visible relative z-[100]">
+          {/* SWAP TAB - 0x Protocol */}
+          <TabsContent value="swap" className="space-y-6">
             <ProtectedTradingWrapper feature="trading">
               <div className="mb-6">
                 <Card className="glass">
@@ -580,15 +381,13 @@ export default function Trading() {
                   </CardContent>
                 </Card>
               </div>
-              
-              {/* Centered Swap Interface - Fixed container */}
-              <div className="flex justify-center mb-6 swap-interface-container relative z-[100]">
-                <div className="w-full max-w-md swap-interface-wrapper relative z-[100]">
+
+              <div className="flex justify-center mb-6">
+                <div className="w-full max-w-md">
                   <SwapInterface />
                 </div>
               </div>
 
-              {/* Portfolio & Info Below - Full Width */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <PortfolioOverview />
                 <Card className="glass">
@@ -606,47 +405,17 @@ export default function Trading() {
             </ProtectedTradingWrapper>
           </TabsContent>
 
-          <TabsContent value="enhanced" className="space-y-6 overflow-visible relative z-[100]">
-            <ProtectedTradingWrapper feature="trading">
-              <EnhancedTradingInterface />
-            </ProtectedTradingWrapper>
-          </TabsContent>
-
-          <TabsContent value="portfolio" className="space-y-6 overflow-visible relative z-[100]">
+          {/* PORTFOLIO TAB */}
+          <TabsContent value="portfolio" className="space-y-6">
             <ProtectedTradingWrapper feature="trading">
               <PortfolioBalanceDisplay />
             </ProtectedTradingWrapper>
           </TabsContent>
 
-          <TabsContent value="social" className="space-y-6 overflow-visible relative z-[100]">
-            <SocialTradingCommunity />
-          </TabsContent>
-
-          <TabsContent value="learning" className="space-y-6 overflow-visible relative z-[100]">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <PersonalizedLearningPath />
-              </div>
-              <div>
-                <CryptoEducationQuiz />
-              </div>
-            </div>
-            <PersonalizedLearning />
-          </TabsContent>
-
-          <TabsContent value="nft" className="space-y-6 overflow-visible relative z-[100]">
-            <NFTMarketplace />
-          </TabsContent>
-
-          <TabsContent value="voice" className="space-y-6 overflow-visible relative z-[100]">
-            <VoiceTradingCommands />
-          </TabsContent>
-
-          <TabsContent value="dashboard" className="space-y-6 overflow-visible relative z-[100]">
+          {/* DASHBOARD TAB */}
+          <TabsContent value="dashboard" className="space-y-6">
             <ProtectedTradingWrapper feature="trading">
-              {/* 🆕 NEW: Integrated Recovery Dashboard with Wallet & Recent Swaps */}
-              <div className="space-y-6 relative z-[100]">
-                {/* Dashboard Header */}
+              <div className="space-y-6">
                 <Card className="glass">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
@@ -662,16 +431,13 @@ export default function Trading() {
                   </CardContent>
                 </Card>
 
-                {/* Recovery Status - Shows if any payments need recovery */}
                 <RecoveryDashboard />
 
-                {/* Portfolio Overview - Existing component */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <PortfolioOverview />
                   <PortfolioBalanceDisplay />
                 </div>
 
-                {/* Recent Trading Activity */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <RecentTrades symbol="BTC/USDT" />
                   <div className="space-y-4">
@@ -680,49 +446,11 @@ export default function Trading() {
                   </div>
                 </div>
 
-                {/* Market Data & Status */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <MarketDataStatus />
                   <BlockchainWalletTracker />
                 </div>
               </div>
-            </ProtectedTradingWrapper>
-          </TabsContent>
-
-          <TabsContent value="api" className="space-y-6 overflow-visible relative z-[100]">
-            <APIServicesDashboard />
-          </TabsContent>
-
-          <TabsContent value="tools" className="space-y-6 overflow-visible relative z-[100]">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <CryptoMemeGenerator />
-              </div>
-              <div>
-                <AccessibilityMode />
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="mood" className="space-y-6 overflow-visible relative z-[100]">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div>
-                <MarketMoodTranslator />
-              </div>
-              <div>
-                <AnimatedDataVisualizations />
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="insights" className="space-y-6 overflow-visible relative z-[100]">
-            <SocialSharingWidget />
-          </TabsContent>
-
-          {/* 🆕 UNCHANGED: P2P tab still uses 0x Protocol */}
-          <TabsContent value="p2p" className="space-y-6 overflow-visible relative z-[100]">
-            <ProtectedTradingWrapper feature="p2p">
-              <P2PTrading />
             </ProtectedTradingWrapper>
           </TabsContent>
         </Tabs>
