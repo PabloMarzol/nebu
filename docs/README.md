@@ -120,6 +120,25 @@ Each ADR includes:
 
 ---
 
+### 5. [TECH_STACK.md](./TECH_STACK.md)
+**Complete Technology Stack Reference** - Detailed library choices
+
+**Contains:**
+- **Frontend Stack:** React, TypeScript, Vite, Tailwind CSS
+- **Chart Libraries:** TradingView Lightweight Charts (candlesticks), Recharts (portfolio), Chart.js (dashboards), D3 (custom)
+- **Backend Stack:** Express, Drizzle ORM, PostgreSQL, Socket.io
+- **Web3 Integration:** Viem, Wagmi, 0x Protocol
+- **Payment Providers:** Stripe, OnRamp Money, NowPayments, ChangeNow
+- **AI Services:** Groq API, Anthropic Claude
+- **External APIs:** CoinGecko, Hyperliquid
+- **Implementation Examples:** Complete code snippets for each technology
+- **Best Practices:** Do's and don'ts for frontend, backend, and security
+- **Quick Reference:** Chart library decision matrix, API priority levels
+
+**Use this** when you need to know which specific library to use for a feature (e.g., "Which charting library for candlesticks?") and how to implement it.
+
+---
+
 ## 🗺️ Documentation Map
 
 ```
@@ -128,6 +147,8 @@ Start Here
 NEW_PROJECT_STRUCTURE.md ←─── Read this first for big picture
     ↓
 ARCHITECTURE_DECISIONS.md ←─── Understand the WHY behind choices
+    ↓
+TECH_STACK.md ←───────────────  Learn WHAT libraries to use and HOW
     ↓
 GETTING_STARTED.md ←────────── Set up your dev environment
     ↓
@@ -147,15 +168,17 @@ Build Features! 🚀
 
 ### For Developers (New to Project)
 1. Read **ARCHITECTURE_DECISIONS.md** - Understand technical foundation
-2. Follow **GETTING_STARTED.md** - Set up your environment
-3. Reference **NEW_PROJECT_STRUCTURE.md** - See implementation examples
-4. Use **IMPLEMENTATION_CHECKLIST.md** - Know what to build next
+2. Review **TECH_STACK.md** - Know which libraries to use for each feature
+3. Follow **GETTING_STARTED.md** - Set up your environment
+4. Reference **NEW_PROJECT_STRUCTURE.md** - See implementation examples
+5. Use **IMPLEMENTATION_CHECKLIST.md** - Know what to build next
 
 ### For Architects/Tech Leads
 1. Study **ARCHITECTURE_DECISIONS.md** - Review all technical decisions
-2. Review **NEW_PROJECT_STRUCTURE.md** - Validate architecture patterns
-3. Add new ADRs as decisions are made
-4. Update checklist with new requirements
+2. Review **TECH_STACK.md** - Validate library and API choices
+3. Review **NEW_PROJECT_STRUCTURE.md** - Validate architecture patterns
+4. Add new ADRs as decisions are made
+5. Update checklist with new requirements
 
 ---
 
@@ -213,6 +236,7 @@ As you build the platform:
 |----------|---------|--------------|
 | NEW_PROJECT_STRUCTURE.md | 1.0 | 2025-11-18 |
 | ARCHITECTURE_DECISIONS.md | 1.0 | 2025-11-18 |
+| TECH_STACK.md | 1.0 | 2025-11-18 |
 | GETTING_STARTED.md | 1.0 | 2025-11-18 |
 | IMPLEMENTATION_CHECKLIST.md | 1.0 | 2025-11-18 |
 
