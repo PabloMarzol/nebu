@@ -139,20 +139,39 @@ Each ADR includes:
 
 ---
 
+### 6. [SYSTEM_DESIGN_AND_SECURITY.md](./SYSTEM_DESIGN_AND_SECURITY.md)
+**Production-Ready System Design & Security Patterns** - Critical implementation guide
+
+**Contains:**
+- **Architectural Implications:** Non-custodial design, Hyperliquid, 0x, OnRamp Money tradeoffs
+- **Integration Flows:** Complete message flows for trading, swaps, and fiat on-ramp
+- **Concrete Examples:** Order execution flow, swap flow, OnRamp flow with sequence diagrams
+- **Failure Modes:** API downtime, quote staleness, webhook failures, relayer compromise, MEV/front-running, DB/chain divergence
+- **Mitigation Strategies:** Circuit breakers, fallback routing, reconciliation, idempotency
+- **Security Patterns:** SIWE authentication, nonce management, EIP-712 signatures, KMS key management, multisig cold storage
+- **Operational Requirements:** Rate limiting, fraud detection, observability, alerting, blockchain watchers
+- **Implementation Checklist:** Phase-by-phase security and operational tasks
+
+**Use this** for understanding HOW to build secure, resilient systems and WHAT TO WATCH OUT FOR in production (security vulnerabilities, failure scenarios, operational requirements).
+
+---
+
 ## 🗺️ Documentation Map
 
 ```
 Start Here
     ↓
-NEW_PROJECT_STRUCTURE.md ←─── Read this first for big picture
+NEW_PROJECT_STRUCTURE.md ←───────────── Read this first for big picture
     ↓
-ARCHITECTURE_DECISIONS.md ←─── Understand the WHY behind choices
+ARCHITECTURE_DECISIONS.md ←──────────── Understand the WHY behind choices
     ↓
-TECH_STACK.md ←───────────────  Learn WHAT libraries to use and HOW
+TECH_STACK.md ←──────────────────────── Learn WHAT libraries to use
     ↓
-GETTING_STARTED.md ←────────── Set up your dev environment
+SYSTEM_DESIGN_AND_SECURITY.md ←──────── Learn HOW to build securely (CRITICAL!)
     ↓
-IMPLEMENTATION_CHECKLIST.md ←─ Follow the 9-week roadmap
+GETTING_STARTED.md ←─────────────────── Set up your dev environment
+    ↓
+IMPLEMENTATION_CHECKLIST.md ←────────── Follow the 9-week roadmap
     ↓
 Build Features! 🚀
 ```
@@ -163,22 +182,25 @@ Build Features! 🚀
 
 ### For Project Managers
 1. Review **NEW_PROJECT_STRUCTURE.md** - Understand scope and timeline
-2. Use **IMPLEMENTATION_CHECKLIST.md** - Track team progress
-3. Reference **ARCHITECTURE_DECISIONS.md** - Understand technical choices
+2. **Review SYSTEM_DESIGN_AND_SECURITY.md** - Understand security requirements and risks
+3. Use **IMPLEMENTATION_CHECKLIST.md** - Track team progress
+4. Reference **ARCHITECTURE_DECISIONS.md** - Understand technical choices
 
 ### For Developers (New to Project)
 1. Read **ARCHITECTURE_DECISIONS.md** - Understand technical foundation
 2. Review **TECH_STACK.md** - Know which libraries to use for each feature
-3. Follow **GETTING_STARTED.md** - Set up your environment
-4. Reference **NEW_PROJECT_STRUCTURE.md** - See implementation examples
-5. Use **IMPLEMENTATION_CHECKLIST.md** - Know what to build next
+3. **Study SYSTEM_DESIGN_AND_SECURITY.md** - Learn security patterns and failure modes (REQUIRED)
+4. Follow **GETTING_STARTED.md** - Set up your environment
+5. Reference **NEW_PROJECT_STRUCTURE.md** - See implementation examples
+6. Use **IMPLEMENTATION_CHECKLIST.md** - Know what to build next
 
 ### For Architects/Tech Leads
 1. Study **ARCHITECTURE_DECISIONS.md** - Review all technical decisions
 2. Review **TECH_STACK.md** - Validate library and API choices
-3. Review **NEW_PROJECT_STRUCTURE.md** - Validate architecture patterns
-4. Add new ADRs as decisions are made
-5. Update checklist with new requirements
+3. **Review SYSTEM_DESIGN_AND_SECURITY.md** - Validate security architecture (CRITICAL)
+4. Review **NEW_PROJECT_STRUCTURE.md** - Validate architecture patterns
+5. Add new ADRs as decisions are made
+6. Update checklist with new requirements
 
 ---
 
@@ -237,6 +259,7 @@ As you build the platform:
 | NEW_PROJECT_STRUCTURE.md | 1.0 | 2025-11-18 |
 | ARCHITECTURE_DECISIONS.md | 1.0 | 2025-11-18 |
 | TECH_STACK.md | 1.0 | 2025-11-18 |
+| SYSTEM_DESIGN_AND_SECURITY.md | 1.0 | 2025-11-18 |
 | GETTING_STARTED.md | 1.0 | 2025-11-18 |
 | IMPLEMENTATION_CHECKLIST.md | 1.0 | 2025-11-18 |
 
@@ -259,6 +282,9 @@ When adding or updating documentation:
 If you have questions about:
 
 - **Architecture** - Review ARCHITECTURE_DECISIONS.md
+- **Technology choices** - Check TECH_STACK.md
+- **Security patterns** - Review SYSTEM_DESIGN_AND_SECURITY.md (non-custodial, relayer security, reconciliation)
+- **Failure scenarios** - See SYSTEM_DESIGN_AND_SECURITY.md failure modes section
 - **Setup issues** - Check GETTING_STARTED.md troubleshooting section
 - **Implementation details** - See NEW_PROJECT_STRUCTURE.md code examples
 - **What to build next** - Consult IMPLEMENTATION_CHECKLIST.md
