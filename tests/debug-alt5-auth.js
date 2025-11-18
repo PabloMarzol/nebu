@@ -1,4 +1,4 @@
-import { alt5TradingService } from './server/services/alt5-trading-service.ts';
+import { alt5TradingService } from '../server/services/alt5-trading-service.ts';
 
 async function debugAuth() {
     console.log('Starting ALT5 authentication debug...');
